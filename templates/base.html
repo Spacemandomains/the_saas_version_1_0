@@ -4,7 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}AI CPO Agent{% endblock %}</title>
+  <script>
+    if (window.location.pathname.startsWith('/app/') && window.location.pathname !== '/app/auth') {
+      if (!localStorage.getItem('cpo_api_key')) {
+        window.location.href = '/app/auth';
+      } else {
+        document.documentElement.classList.add('auth-ok');
+      }
+    } else {
+      document.documentElement.classList.add('auth-ok');
+    }
+  </script>
   <style>
+    html:not(.auth-ok) .layout { display: none; }
     :root {
       --sidebar-bg: #1a1d2e;
       --sidebar-hover: #252940;
@@ -316,14 +328,6 @@
   <script>
     const API_KEY = localStorage.getItem('cpo_api_key');
     const USER_EMAIL = localStorage.getItem('cpo_email');
-
-    function isProtectedPage() {
-      return window.location.pathname.startsWith('/app/') && window.location.pathname !== '/app/auth';
-    }
-
-    if (isProtectedPage() && !API_KEY) {
-      window.location.href = '/app/auth';
-    }
 
     const FIRST_NAME = localStorage.getItem('cpo_first_name') || '';
     const ROLE = localStorage.getItem('cpo_role') || '';
