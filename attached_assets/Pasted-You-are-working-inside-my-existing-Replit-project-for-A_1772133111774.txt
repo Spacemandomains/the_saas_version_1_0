@@ -1,0 +1,86 @@
+You are working inside my existing Replit project for “AI CPO Agent (Gemini) MVP”.
+Do NOT rebuild the app. Implement one automated daily job that reads the connected Google Doc and writes back two things:
+(1) a “Daily Recap” of what occurred since the last run, and
+(2) a “Daily CPO Brief” that tells the founder what to do next.
+
+CONTEXT
+- The app already connects to a Google Doc that the founder uses as the “Source of Truth”.
+- The agent already has capability to write notes to a Google Doc and do a recap of the day.
+- We need automation: once turned on, it runs daily without founder interaction.
+
+GOAL
+Every day, automatically:
+1) Read the Google Doc.
+2) Identify all new founder entries since the last successful run.
+3) Generate a “Daily Recap” (what happened).
+4) Generate a “Daily CPO Brief” (focus + next actions).
+5) Append both outputs to the Google Doc under a dated heading.
+6) Store last_run_timestamp (or doc revision id) so tomorrow we only process new content.
+
+NON-NEGOTIABLE OUTPUTS (APPENDED TO DOC DAILY)
+Append this exact structure:
+
+### Daily Recap — {YYYY-MM-DD}
+- What happened (3–7 bullets)
+- Decisions made (0–3 bullets)
+- Blockers / risks (0–3 bullets)
+
+### Daily CPO Brief — {YYYY-MM-DD}
+- Focus (next 14 days): one sentence
+- Next 48 hours: max 3 bullets
+- One metric to watch: one line
+- Kill list (today): max 3 bullets (things to ignore)
+- One question for founder: one question only (optional)
+
+DOC STRUCTURE (MUST SUPPORT MESSY INPUT)
+- Founder may write anywhere, but prefer reading from a “Daily Notes (Founder)” section if it exists.
+- If the doc does not contain these headings, create them once:
+  1) “Current Focus”
+  2) “Daily Notes (Founder)”
+  3) “CPO Output (Auto)”
+- Always append the daily outputs into “CPO Output (Auto)” to keep the doc clean.
+
+AUTOMATION
+- Add an internal endpoint: POST /jobs/daily_doc_run
+  - This endpoint performs the daily read→summarize→brief→append pipeline.
+  - It must be idempotent: if called twice in the same day, it should not duplicate entries (check last run date).
+- Add a toggle in the app settings or dashboard: “AI CPO: Active / Paused”
+  - If Paused, /jobs/daily_doc_run exits without writing.
+- Add scheduling guidance in code comments, but implement a simple scheduler-friendly approach:
+  - The job should be callable by an external scheduler (cron) hitting /jobs/daily_doc_run with a secret token.
+  - Add env var: JOB_SECRET. Require header “X-Job-Secret” to match JOB_SECRET.
+
+STATE / STORAGE
+Persist per workspace/user:
+- google_doc_id (already exists)
+- last_run_at (timestamp)
+- last_run_date (YYYY-MM-DD)
+- last_doc_revision (optional)
+- ai_cpo_enabled (boolean)
+Store in existing DB/storage mechanism, or fallback to a simple JSON file store if needed (but prefer existing storage).
+
+PROMPTING REQUIREMENTS
+- Use executive tone, concise, structured.
+- Never output long paragraphs.
+- Recap must be faithful to the founder’s new notes; do not invent events.
+- CPO Brief must choose ONE focus and MAX 3 next actions.
+- Always include a Kill list (max 3).
+- If no new notes since last run:
+  - Daily Recap should say “No new founder notes detected since last run.”
+  - Daily CPO Brief should restate current focus and give next 48 hours actions based on last brief.
+
+IMPLEMENTATION STEPS
+1) Locate current Google Docs integration code and reuse it.
+2) Implement “read new content since last run”:
+   - If you can’t diff by revision, then store last_run_at and extract content written after the last “Daily Recap” heading.
+   - Prefer robust approach: scan “CPO Output (Auto)” for the most recent date entry.
+3) Implement the daily job endpoint /jobs/daily_doc_run.
+4) Append formatted output into the doc under “CPO Output (Auto)”.
+5) Add the enable/disable toggle.
+6) Add minimal logging so we can debug (log last_run_at, doc_id, note length, write success).
+7) Provide a final summary: files changed, new env vars needed, and how to trigger the job.
+
+DELIVERABLE
+- Code changes implemented.
+- List of files changed.
+- A short “How to run daily” note: example curl request for /jobs/daily_doc_run including X-Job-Secret header.

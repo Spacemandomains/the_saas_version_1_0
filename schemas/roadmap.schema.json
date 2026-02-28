@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Product Roadmap",
+  "type": "object",
+  "properties": {
+    "time_horizon": { "type": "string" },
+    "initiatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "priority": { "type": "string" },
+          "metrics": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "status": { "type": "string" },
+          "target_quarter": { "type": "string" }
+        },
+        "required": ["name", "description"]
+      }
+    }
+  },
+  "required": ["time_horizon", "initiatives"]
+}

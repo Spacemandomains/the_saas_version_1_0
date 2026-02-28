@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Technical Handoff Document",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string" },
+    "overview": { "type": "string" },
+    "architecture_notes": { "type": "string" },
+    "api_endpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "method": { "type": "string" },
+          "path": { "type": "string" },
+          "description": { "type": "string" },
+          "request_body": { "type": "string" },
+          "response": { "type": "string" }
+        },
+        "required": ["method", "path", "description"]
+      }
+    },
+    "data_models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "fields": { "type": "string" },
+          "relationships": { "type": "string" }
+        },
+        "required": ["name", "fields"]
+      }
+    },
+    "implementation_notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "testing_requirements": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "deployment_steps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "known_issues": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["title", "overview", "architecture_notes", "implementation_notes"]
+}

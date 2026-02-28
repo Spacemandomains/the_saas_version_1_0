@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block title %}Metrics Dashboard — AI CPO Agent{% endblock %}
+{% block page_title %}Metrics Dashboard{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;">
+  <div class="card" style="margin-bottom:24px;">
+    <h3 style="font-size:18px;margin-bottom:4px;">Log Metrics Snapshot</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">Track your key product metrics over time. The AI analyses trends and provides strategic insights.</p>
+    <div id="alertBox"></div>
+    <form onsubmit="addMetrics(event)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+        <div class="form-group">
+          <label for="period">Period</label>
+          <input type="text" id="period" placeholder="e.g. Jan 2026, Week 5" required />
+        </div>
+        <div class="form-group">
+          <label for="activationRate">Activation Rate</label>
+          <input type="text" id="activationRate" placeholder="e.g. 42%" />
+        </div>
+        <div class="form-group">
+          <label for="retentionRate">Retention Rate</label>
+          <input type="text" id="retentionRate" placeholder="e.g. 78%" />
+        </div>
+        <div class="form-group">
+          <label for="churnRate">Churn Rate</label>
+          <input type="text" id="churnRate" placeholder="e.g. 5.2%" />
+        </div>
+        <div class="form-group">
+          <label for="revenue">Revenue</label>
+          <input type="text" id="revenue" placeholder="e.g. $12,500" />
+        </div>
+        <div class="form-group">
+          <label for="mrr">MRR</label>
+          <input type="text" id="mrr" placeholder="e.g. $8,200" />
+        </div>
+        <div class="form-group">
+          <label for="activeUsers">Active Users</label>
+          <input type="text" id="activeUsers" placeholder="e.g. 340" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <input type="text" id="notes" placeholder="e.g. Launched new onboarding flow this period" />
+      </div>
+      <button type="submit" class="btn btn-primary" id="addBtn">Add Snapshot</button>
+    </form>
+  </div>
+
+  <div class="card" style="margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:16px;">AI Insights</h3>
+      <button class="btn btn-primary" id="insightsBtn" onclick="getInsights()" style="padding:8px 16px;font-size:13px;">Analyse Metrics</button>
+    </div>
+    <div id="insightsArea">
+      <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:24px 0;">Add metrics data, then click "Analyse Metrics" for AI-driven insights.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:16px;">Metrics History</h3>
+    </div>
+    <div id="metricsTable">
+      <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:24px 0;">Loading...</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function loadMetrics() {
+    const container = document.getElementById('metricsTable');
+    try {
+      const res = await fetch('/me/metrics', { headers: authHeaders() });
+      if (!res.ok) throw new Error('Failed to load');
+      const rows = await res.json();
+      if (rows.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted);font-size:14px;text-align:center;padding:24px 0;">No metrics logged yet.</p>';
+        return;
+      }
+      let html = '<div class="table-wrapper"><table><thead><tr><th>Period</th><th>Activation</th><th>Retention</th><th>Churn</th><th>Revenue</th><th>MRR</th><th>Users</th><th></th></tr></thead><tbody>';
+      rows.forEach(r => {
+        html += '<tr>';
+        html += '<td style="font-weight:600;">' + escapeHtml(r.period) + '</td>';
+        html += '<td>' + escapeHtml(r.activation_rate || '-') + '</td>';
+        html += '<td>' + escapeHtml(r.retention_rate || '-') + '</td>';
+        html += '<td>' + escapeHtml(r.churn_rate || '-') + '</td>';
+        html += '<td>' + escapeHtml(r.revenue || '-') + '</td>';
+        html += '<td>' + escapeHtml(r.mrr || '-') + '</td>';
+        html += '<td>' + escapeHtml(r.active_users || '-') + '</td>';
+        html += '<td><button onclick="deleteMetric(' + r.id + ')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;" title="Delete">';
+        html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+        html += '</button></td></tr>';
+      });
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    } catch (e) {
+      container.innerHTML = '<p style="color:var(--danger);font-size:14px;">Failed to load metrics.</p>';
+    }
+  }
+
+  async function addMetrics(e) {
+    e.preventDefault();
+    const btn = document.getElementById('addBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Adding...';
+    document.getElementById('alertBox').innerHTML = '';
+
+    try {
+      const res = await fetch('/me/metrics', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          period: document.getElementById('period').value.trim(),
+          activation_rate: document.getElementById('activationRate').value.trim(),
+          retention_rate: document.getElementById('retentionRate').value.trim(),
+          churn_rate: document.getElementById('churnRate').value.trim(),
+          revenue: document.getElementById('revenue').value.trim(),
+          mrr: document.getElementById('mrr').value.trim(),
+          active_users: document.getElementById('activeUsers').value.trim(),
+          notes: document.getElementById('notes').value.trim(),
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to add');
+      document.getElementById('period').value = '';
+      document.getElementById('activationRate').value = '';
+      document.getElementById('retentionRate').value = '';
+      document.getElementById('churnRate').value = '';
+      document.getElementById('revenue').value = '';
+      document.getElementById('mrr').value = '';
+      document.getElementById('activeUsers').value = '';
+      document.getElementById('notes').value = '';
+      loadMetrics();
+    } catch (err) {
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-error">' + escapeHtml(err.message) + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Add Snapshot';
+    }
+  }
+
+  async function deleteMetric(id) {
+    if (!confirm('Delete this metrics snapshot?')) return;
+    try {
+      const res = await fetch('/me/metrics/' + id, { method: 'DELETE', headers: authHeaders() });
+      if (!res.ok) throw new Error('Failed to delete');
+      loadMetrics();
+    } catch (e) {
+      alert('Failed to delete metric');
+    }
+  }
+
+  async function getInsights() {
+    const btn = document.getElementById('insightsBtn');
+    const area = document.getElementById('insightsArea');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Analysing...';
+    area.innerHTML = '<p style="text-align:center;padding:24px;color:var(--text-muted);">AI is analysing your metrics...</p>';
+
+    try {
+      const res = await fetch('/api/metrics/insights', {
+        method: 'POST',
+        headers: authHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Analysis failed');
+      renderInsights(data);
+    } catch (err) {
+      area.innerHTML = '<div class="alert alert-error">' + escapeHtml(err.message) + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Analyse Metrics';
+    }
+  }
+
+  function renderInsights(data) {
+    const area = document.getElementById('insightsArea');
+    let html = '';
+
+    const score = data.health_score || 0;
+    const scoreColor = score >= 70 ? 'var(--success)' : score >= 40 ? 'var(--warning)' : 'var(--danger)';
+    html += '<div style="display:flex;gap:24px;margin-bottom:20px;flex-wrap:wrap;">';
+    html += '<div style="text-align:center;"><div style="font-size:48px;font-weight:700;color:' + scoreColor + ';">' + score + '</div>';
+    html += '<div style="font-size:13px;color:var(--text-muted);">Health Score</div>';
+    html += '<div style="font-size:14px;font-weight:600;">' + escapeHtml(data.health_label || '') + '</div></div>';
+
+    if (data.pmf_assessment) {
+      const pmf = data.pmf_assessment;
+      const pmfColor = pmf.score >= 7 ? 'var(--success)' : pmf.score >= 4 ? 'var(--warning)' : 'var(--danger)';
+      html += '<div style="text-align:center;"><div style="font-size:48px;font-weight:700;color:' + pmfColor + ';">' + (pmf.score || 0) + '</div>';
+      html += '<div style="font-size:13px;color:var(--text-muted);">PMF Score</div>';
+      html += '<div style="font-size:14px;font-weight:600;">' + escapeHtml(pmf.label || '') + '</div></div>';
+    }
+    html += '</div>';
+
+    if (data.pmf_assessment && data.pmf_assessment.rationale) {
+      html += '<div style="padding:12px;background:#f0f9ff;border-radius:8px;margin-bottom:16px;font-size:14px;">';
+      html += '<strong>PMF Assessment:</strong> ' + escapeHtml(data.pmf_assessment.rationale);
+      html += '</div>';
+    }
+
+    if (data.key_insights && data.key_insights.length) {
+      html += '<h4 style="font-size:14px;margin-bottom:8px;">Key Insights</h4>';
+      data.key_insights.forEach(i => {
+        html += '<div style="padding:8px 12px;background:var(--bg);border-radius:6px;margin-bottom:6px;font-size:14px;">' + escapeHtml(i) + '</div>';
+      });
+    }
+
+    if (data.trends && data.trends.length) {
+      html += '<h4 style="font-size:14px;margin:16px 0 8px;">Trends</h4>';
+      data.trends.forEach(t => {
+        const arrows = { up: '&#9650;', down: '&#9660;', flat: '&#9654;' };
+        const colors = { up: 'var(--success)', down: 'var(--danger)', flat: 'var(--text-muted)' };
+        html += '<div style="display:flex;gap:8px;align-items:center;padding:6px 0;font-size:14px;">';
+        html += '<span style="color:' + (colors[t.direction] || 'inherit') + ';font-size:12px;">' + (arrows[t.direction] || '') + '</span>';
+        html += '<strong>' + escapeHtml(t.metric) + '</strong> ' + escapeHtml(t.note || '');
+        html += '</div>';
+      });
+    }
+
+    if (data.warnings && data.warnings.length) {
+      html += '<h4 style="font-size:14px;margin:16px 0 8px;color:var(--danger);">Warnings</h4>';
+      data.warnings.forEach(w => {
+        html += '<div style="padding:8px 12px;background:#fef2f2;border-radius:6px;margin-bottom:6px;font-size:14px;color:var(--danger);">&#9888; ' + escapeHtml(w) + '</div>';
+      });
+    }
+
+    if (data.recommendations && data.recommendations.length) {
+      html += '<h4 style="font-size:14px;margin:16px 0 8px;">Recommendations</h4>';
+      data.recommendations.forEach(r => {
+        const impactBg = { high: '#d1fae5', medium: '#fef3c7', low: '#f3f4f6' };
+        html += '<div style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">';
+        html += '<div style="font-size:14px;font-weight:600;">' + escapeHtml(r.action) + '</div>';
+        html += '<div style="display:flex;gap:8px;margin-top:4px;">';
+        html += '<span class="badge" style="background:' + (impactBg[r.impact] || '#f3f4f6') + ';font-size:11px;">Impact: ' + escapeHtml(r.impact || '') + '</span>';
+        html += '<span class="badge" style="background:#f3f4f6;font-size:11px;">Effort: ' + escapeHtml(r.effort || '') + '</span>';
+        html += '</div></div>';
+      });
+    }
+
+    area.innerHTML = html;
+  }
+
+  loadMetrics();
+</script>
+{% endblock %}

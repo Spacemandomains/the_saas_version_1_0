@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Document — AI CPO Agent{% endblock %}
+{% block page_title %}Document Details{% endblock %}
+
+{% block content %}
+<div id="docContent">
+  <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:48px 0;">Loading...</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const docId = '{{ doc_id }}';
+
+  async function loadDoc() {
+    const container = document.getElementById('docContent');
+    try {
+      const res = await fetch('/me/docs/' + docId, { headers: authHeaders() });
+      if (!res.ok) throw new Error('Not found');
+      const doc = await res.json();
+
+      const badge = 'badge-' + doc.doc_type;
+      const date = formatDateTime(doc.created_at);
+
+      let html = '<div style="margin-bottom:20px;">';
+      html += '<a href="/app/documents" style="color:var(--primary);text-decoration:none;font-size:13px;font-weight:600;">&larr; Back to Documents</a>';
+      html += '</div>';
+      html += '<div class="card" style="margin-bottom:20px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">';
+      html += '<div><h2 style="font-size:20px;margin-bottom:8px;">' + escapeHtml(doc.title) + '</h2>';
+      html += '<div style="display:flex;gap:12px;align-items:center;"><span class="badge ' + badge + '">' + doc.doc_type.toUpperCase() + '</span>';
+      html += '<span style="color:var(--text-muted);font-size:13px;">' + date + '</span></div></div>';
+      html += '<div style="display:flex;gap:8px;">';
+      html += '<button class="btn btn-primary" onclick="exportToGdoc()" id="exportBtn">Export to Google Docs</button>';
+      html += '<button class="btn btn-secondary" onclick="copyDoc()">Copy JSON</button>';
+      html += '</div>';
+      html += '</div></div>';
+      html += '<div id="exportAlert"></div>';
+      html += '<div class="card"><div class="json-viewer" id="jsonViewer">' + formatJsonHtml(doc.content) + '</div></div>';
+
+      container.innerHTML = html;
+      window._docContent = doc.content;
+    } catch (e) {
+      container.innerHTML = '<div class="alert alert-error">Document not found or access denied.</div><a href="/app/documents" style="color:var(--primary);text-decoration:none;font-weight:600;">&larr; Back to Documents</a>';
+    }
+  }
+
+  async function exportToGdoc() {
+    const btn = document.getElementById('exportBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Exporting...';
+    document.getElementById('exportAlert').innerHTML = '';
+
+    try {
+      const res = await fetch('/api/export-gdoc', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ doc_id: parseInt(docId) })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Export failed');
+
+      document.getElementById('exportAlert').innerHTML =
+        '<div style="padding:12px;background:#e8f5e9;border-radius:8px;margin-bottom:16px;">' +
+        '<span style="color:#2e7d32;font-weight:600;">Exported to Google Docs: </span>' +
+        '<a href="' + data.url + '" target="_blank" style="color:#1565c0;font-weight:600;">Open Document</a></div>';
+    } catch (err) {
+      document.getElementById('exportAlert').innerHTML =
+        '<div class="alert alert-error">' + escapeHtml(err.message) + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Export to Google Docs';
+    }
+  }
+
+  function copyDoc() {
+    if (window._docContent) {
+      navigator.clipboard.writeText(JSON.stringify(window._docContent, null, 2));
+    }
+  }
+
+  loadDoc();
+</script>
+{% endblock %}

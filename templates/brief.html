@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Product Brief — AI CPO Agent{% endblock %}
+{% block page_title %}Product Brief{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:800px;">
+  <h3 style="font-size:18px;margin-bottom:4px;">Your Product Brief</h3>
+  <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">This context is used by the AI agent when generating documents. Keep it up to date with your product's ICP, value proposition, and key metrics.</p>
+  <div id="alertBox"></div>
+  <div class="form-group">
+    <textarea id="briefContent" style="min-height:300px;font-size:14px;line-height:1.6;" placeholder="Loading..."></textarea>
+  </div>
+  <button class="btn btn-primary" id="saveBtn" onclick="saveBrief()">Save Brief</button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function loadBrief() {
+    try {
+      const res = await fetch('/me/product-brief', { headers: authHeaders() });
+      if (!res.ok) throw new Error('Failed to load');
+      const data = await res.json();
+      document.getElementById('briefContent').value = data.content || '';
+    } catch (e) {
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-error">Failed to load product brief.</div>';
+    }
+  }
+
+  async function saveBrief() {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+    document.getElementById('alertBox').innerHTML = '';
+
+    const content = document.getElementById('briefContent').value;
+
+    try {
+      const res = await fetch('/me/product-brief', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ content })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to save');
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-success">Product brief saved successfully!</div>';
+    } catch (err) {
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-error">' + escapeHtml(err.message) + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Save Brief';
+    }
+  }
+
+  loadBrief();
+</script>
+{% endblock %}

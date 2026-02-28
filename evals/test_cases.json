@@ -1,0 +1,14 @@
+[
+  {
+    "prompt": "Define the ICP for the product",
+    "expected_contains": ["ideal customer profile", "ICP"]
+  },
+  {
+    "prompt": "Generate a PRD outline for adding a dark mode feature",
+    "expected_contains": ["overview", "problem", "goals", "user stories"]
+  },
+  {
+    "prompt": "Prioritize these features: real-time collaboration, offline mode, and improved search",
+    "expected_contains": ["priority", "reasoning", "ranking"]
+  }
+]

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Settings — AI C-Suite{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;">
+  <div class="card" style="margin-bottom:24px;">
+    <h3 style="font-size:16px;margin-bottom:16px;">Your Profile</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>First Name</label>
+        <input type="text" id="firstName" placeholder="Your first name" />
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Role</label>
+        <input type="text" id="userRole" value="CEO" disabled style="background:#f4f5f9;color:var(--text-muted);" />
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>Company Name</label>
+      <input type="text" id="companyName" placeholder="e.g. The Six SaaS" />
+    </div>
+    <div class="form-group">
+      <label>Company Logo URL</label>
+      <input type="text" id="companyLogo" placeholder="https://example.com/logo.png" />
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">
+        Paste a URL to your company logo. It will appear across your AI C-Suite.
+      </p>
+    </div>
+    <div class="form-group">
+      <label>Timezone</label>
+      <select id="userTimezone" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;width:100%;">
+        <option value="US/Eastern">Eastern (ET)</option>
+        <option value="US/Central">Central (CT)</option>
+        <option value="US/Mountain">Mountain (MT)</option>
+        <option value="US/Pacific">Pacific (PT)</option>
+        <option value="US/Alaska">Alaska (AKT)</option>
+        <option value="US/Hawaii">Hawaii (HT)</option>
+        <option value="UTC">UTC</option>
+        <option value="Europe/London">London (GMT/BST)</option>
+        <option value="Europe/Paris">Paris / Berlin (CET)</option>
+        <option value="Europe/Athens">Athens / Helsinki (EET)</option>
+        <option value="Asia/Dubai">Dubai (GST)</option>
+        <option value="Asia/Kolkata">India (IST)</option>
+        <option value="Asia/Singapore">Singapore (SGT)</option>
+        <option value="Asia/Tokyo">Tokyo (JST)</option>
+        <option value="Asia/Shanghai">China (CST)</option>
+        <option value="Australia/Sydney">Sydney (AEST)</option>
+        <option value="Pacific/Auckland">New Zealand (NZST)</option>
+        <option value="America/Sao_Paulo">Sao Paulo (BRT)</option>
+        <option value="America/Mexico_City">Mexico City (CST)</option>
+        <option value="Africa/Lagos">Lagos (WAT)</option>
+        <option value="Africa/Johannesburg">Johannesburg (SAST)</option>
+      </select>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">
+        All AI agents will use this timezone for timestamps in their output.
+      </p>
+    </div>
+    <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+  </div>
+
+  <div class="card" style="margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:16px;">Team</h3>
+    </div>
+    <div id="teamList" style="margin-bottom:16px;">
+      <p style="color:var(--text-muted);font-size:14px;">Loading...</p>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:16px;">
+      <h4 style="font-size:14px;margin-bottom:12px;">Invite a Co-Founder or Team Member</h4>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Email</label>
+          <input type="email" id="inviteEmail" placeholder="cofounder@company.com" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Role</label>
+          <select id="inviteRole" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;">
+            <option value="Co-Founder">Co-Founder</option>
+            <option value="Advisor">Advisor</option>
+            <option value="Team Member">Team Member</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="inviteMember()">Send Invite</button>
+      <div id="inviteResult" style="margin-top:12px;display:none;"></div>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--bg);border:1px dashed var(--border);">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <p style="font-size:13px;color:var(--text-muted);margin:0;">
+        Each AI agent has its own settings on its dashboard. Go to an agent's dashboard to configure its automation, docs, and monitoring.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function loadProfile() {
+    try {
+      const res = await fetch('/me/profile', { headers: authHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById('firstName').value = data.first_name || '';
+      document.getElementById('userRole').value = data.role || 'CEO';
+      document.getElementById('companyName').value = data.company_name || '';
+      document.getElementById('companyLogo').value = data.company_logo || '';
+      if (data.timezone) {
+        document.getElementById('userTimezone').value = data.timezone;
+        localStorage.setItem('cpo_timezone', data.timezone);
+        updateTimezoneDisplay();
+      }
+    } catch(e) {}
+  }
+
+  async function saveProfile() {
+    try {
+      const res = await fetch('/me/profile', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          first_name: document.getElementById('firstName').value,
+          company_name: document.getElementById('companyName').value,
+          company_logo: document.getElementById('companyLogo').value,
+          timezone: document.getElementById('userTimezone').value,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('cpo_first_name', data.first_name || '');
+        localStorage.setItem('cpo_role', data.role || 'CEO');
+        localStorage.setItem('cpo_company_name', data.company_name || '');
+        localStorage.setItem('cpo_company_logo', data.company_logo || '');
+        localStorage.setItem('cpo_timezone', data.timezone || document.getElementById('userTimezone').value || 'US/Eastern');
+        updateTimezoneDisplay();
+        showToast('Profile saved');
+      } else {
+        showToast(data.detail || 'Failed to save profile', 'error');
+      }
+    } catch(e) {
+      showToast('Request failed', 'error');
+    }
+  }
+
+  async function loadTeam() {
+    const container = document.getElementById('teamList');
+    try {
+      const res = await fetch('/me/team', { headers: authHeaders() });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      if (!data.members || data.members.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted);font-size:14px;">No team members yet. Invite a co-founder below.</p>';
+        return;
+      }
+      let html = '';
+      data.members.forEach(m => {
+        const name = m.first_name || m.email.split('@')[0];
+        const initials = name.charAt(0).toUpperCase();
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">';
+        html += '<div style="display:flex;align-items:center;gap:12px;">';
+        html += '<div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">' + initials + '</div>';
+        html += '<div>';
+        html += '<div style="font-size:14px;font-weight:600;">' + escapeHtml(name) + '</div>';
+        html += '<div style="font-size:12px;color:var(--text-muted);">' + escapeHtml(m.email) + '</div>';
+        html += '</div></div>';
+        html += '<span style="font-size:12px;padding:3px 10px;border-radius:20px;background:#ede9fe;color:#7c3aed;font-weight:600;">' + escapeHtml(m.role) + '</span>';
+        html += '</div>';
+      });
+      container.innerHTML = html;
+    } catch(e) {
+      container.innerHTML = '<p style="color:var(--danger);font-size:14px;">Failed to load team.</p>';
+    }
+  }
+
+  async function inviteMember() {
+    const resultDiv = document.getElementById('inviteResult');
+    const email = document.getElementById('inviteEmail').value.trim();
+    const role = document.getElementById('inviteRole').value;
+    if (!email) return;
+
+    try {
+      const res = await fetch('/me/team/invite', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ email, role }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'Invite sent');
+        document.getElementById('inviteEmail').value = '';
+        loadTeam();
+      } else {
+        showToast(data.detail || 'Failed to send invite', 'error');
+      }
+    } catch(e) {
+      showToast('Request failed', 'error');
+    }
+  }
+
+  loadProfile();
+  loadTeam();
+</script>
+{% endblock %}

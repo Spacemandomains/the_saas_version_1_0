@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+{% block title %}Generate Document — AI CPO Agent{% endblock %}
+{% block page_title %}Generate Document{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:720px;">
+  <h3 style="font-size:18px;margin-bottom:20px;">Generate a New Document</h3>
+  <div id="alertBox"></div>
+  <form id="genForm" onsubmit="handleGenerate(event)">
+    <div class="form-group">
+      <label for="docType">Document Type</label>
+      <select id="docType" onchange="updateFields()">
+        <optgroup label="Core Documents">
+          <option value="prd">PRD (Product Requirements)</option>
+          <option value="roadmap">Roadmap</option>
+          <option value="sprint">Sprint Plan</option>
+          <option value="recap">Daily Recap</option>
+        </optgroup>
+        <optgroup label="Feature & Engineering">
+          <option value="feature_spec">Feature Specification</option>
+          <option value="user_stories">User Stories</option>
+          <option value="technical_handoff">Technical Handoff</option>
+        </optgroup>
+        <optgroup label="Strategy & Communication">
+          <option value="release_notes">Release Notes</option>
+          <option value="strategy_memo">Strategy Memo</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="docTitle">Title</label>
+      <input type="text" id="docTitle" placeholder="e.g. Q2 Roadmap, Login Feature PRD" />
+    </div>
+    <div id="dynamicFields"></div>
+    <div style="display:flex;gap:16px;align-items:center;margin-top:12px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="exportGdoc" style="width:auto;" onchange="toggleGdocUrl()" />
+        <span style="font-size:13px;">Export to Google Docs</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="challengeFirst" style="width:auto;" checked />
+        <span style="font-size:13px;">Executive Challenge (AI reviews first)</span>
+      </label>
+    </div>
+    <div id="gdocOptions" style="display:none;margin-top:12px;">
+      <div style="display:flex;gap:12px;margin-bottom:12px;">
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px 16px;border:2px solid var(--primary);border-radius:8px;cursor:pointer;background:var(--primary-bg);" id="gdocOptNewLabel">
+          <input type="radio" name="gdocMode" value="new" id="gdocModeNew" checked onchange="toggleGdocMode()" style="width:auto;" />
+          <div>
+            <div style="font-size:14px;font-weight:600;">Create new doc</div>
+            <div style="font-size:12px;color:var(--text-muted);">Start a fresh Google Doc</div>
+          </div>
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px 16px;border:2px solid var(--border);border-radius:8px;cursor:pointer;" id="gdocOptExistingLabel">
+          <input type="radio" name="gdocMode" value="existing" id="gdocModeExisting" onchange="toggleGdocMode()" style="width:auto;" />
+          <div>
+            <div style="font-size:14px;font-weight:600;">Add to existing doc</div>
+            <div style="font-size:12px;color:var(--text-muted);">Append to a doc you manage</div>
+          </div>
+        </label>
+      </div>
+      <div id="gdocUrlField" style="display:none;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="gdocDocUrl">Google Doc URL</label>
+          <input type="text" id="gdocDocUrl" placeholder="https://docs.google.com/document/d/..." />
+        </div>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" id="genBtn" style="margin-top:12px;">
+      Generate
+    </button>
+  </form>
+</div>
+
+<div id="challengeArea" style="display:none;margin-top:24px;">
+  <div class="card" style="border-left:4px solid var(--warning);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--warning)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <h3 style="font-size:18px;">Executive Challenge</h3>
+    </div>
+    <div id="challengeContent"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="proceedAfterChallenge()">Proceed with Generation</button>
+      <button class="btn btn-secondary" onclick="cancelChallenge()">Revise Inputs</button>
+    </div>
+  </div>
+</div>
+
+<div id="resultArea" style="display:none;margin-top:24px;">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <h3 style="font-size:18px;">Generated Output</h3>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="copyResult()">Copy JSON</button>
+      </div>
+    </div>
+    <div id="gdocLink" style="display:none;margin-bottom:16px;padding:12px;background:#e8f5e9;border-radius:8px;">
+      <span id="gdocLabel" style="color:#2e7d32;font-weight:600;">Exported to Google Docs: </span>
+      <a id="gdocUrl" href="#" target="_blank" style="color:#1565c0;font-weight:600;">Open Document</a>
+    </div>
+    <div id="gdocError" style="display:none;margin-bottom:16px;" class="alert alert-error"></div>
+    <div class="json-viewer" id="resultJson"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const fieldDefs = {
+    prd: [
+      { key: 'feature_name', label: 'Feature Name', type: 'text', placeholder: 'e.g. User Onboarding' },
+      { key: 'description', label: 'Description', type: 'text', placeholder: 'Brief description of the feature' },
+      { key: 'problems', label: 'Problems to Solve', type: 'textarea', placeholder: 'List the problems this feature addresses' },
+      { key: 'solution', label: 'Proposed Solution', type: 'text', placeholder: 'High-level solution approach' },
+      { key: 'metrics', label: 'Success Metrics', type: 'textarea', placeholder: 'How will you measure success?' }
+    ],
+    roadmap: [
+      { key: 'quarters', label: 'Quarters (comma-separated)', type: 'text', placeholder: 'e.g. Q1, Q2, Q3' },
+      { key: 'themes', label: 'Themes (comma-separated)', type: 'text', placeholder: 'e.g. Growth, Retention, Platform' }
+    ],
+    sprint: [
+      { key: 'tasks', label: 'Tasks (one per line)', type: 'textarea', placeholder: 'Build login page\nAdd payment integration\nWrite unit tests' },
+      { key: 'duration_weeks', label: 'Duration (weeks)', type: 'number', placeholder: '2' }
+    ],
+    recap: [
+      { key: 'date', label: 'Date', type: 'text', placeholder: 'e.g. 2026-02-13 or today' },
+      { key: 'accomplishments', label: 'Key Accomplishments', type: 'textarea', placeholder: 'What was accomplished today?' },
+      { key: 'blockers', label: 'Blockers / Issues', type: 'textarea', placeholder: 'Any blockers or issues encountered?' },
+      { key: 'next_steps', label: 'Next Steps', type: 'textarea', placeholder: 'What needs to happen next?' }
+    ],
+    feature_spec: [
+      { key: 'feature_name', label: 'Feature Name', type: 'text', placeholder: 'e.g. Team Collaboration' },
+      { key: 'description', label: 'Feature Description', type: 'textarea', placeholder: 'Describe what the feature should do' },
+      { key: 'target_users', label: 'Target Users', type: 'text', placeholder: 'e.g. Admin users, Team leads' },
+      { key: 'priority', label: 'Priority', type: 'text', placeholder: 'e.g. P0, P1, P2' }
+    ],
+    user_stories: [
+      { key: 'epic_name', label: 'Epic / Feature Name', type: 'text', placeholder: 'e.g. User Authentication' },
+      { key: 'description', label: 'Epic Description', type: 'textarea', placeholder: 'Describe the feature area these stories cover' },
+      { key: 'personas', label: 'User Personas (one per line)', type: 'textarea', placeholder: 'Admin user\nEnd customer\nAPI developer' }
+    ],
+    technical_handoff: [
+      { key: 'feature_name', label: 'Feature Being Handed Off', type: 'text', placeholder: 'e.g. Payment Integration' },
+      { key: 'description', label: 'Description', type: 'textarea', placeholder: 'What is being built and why' },
+      { key: 'tech_stack', label: 'Tech Stack', type: 'text', placeholder: 'e.g. Python, FastAPI, PostgreSQL' },
+      { key: 'constraints', label: 'Constraints / Requirements', type: 'textarea', placeholder: 'Any technical constraints or requirements' }
+    ],
+    release_notes: [
+      { key: 'version', label: 'Version', type: 'text', placeholder: 'e.g. v2.1.0' },
+      { key: 'release_date', label: 'Release Date', type: 'text', placeholder: 'e.g. 2026-03-01' },
+      { key: 'changes', label: 'Changes (one per line)', type: 'textarea', placeholder: 'Added team dashboard\nFixed login timeout\nImproved search speed' }
+    ],
+    strategy_memo: [
+      { key: 'topic', label: 'Strategic Topic', type: 'text', placeholder: 'e.g. Should we expand to enterprise?' },
+      { key: 'context', label: 'Context / Background', type: 'textarea', placeholder: 'What is driving this strategic question?' },
+      { key: 'options', label: 'Options to Consider (one per line)', type: 'textarea', placeholder: 'Option A: Focus on SMB\nOption B: Move upmarket\nOption C: Build platform play' }
+    ]
+  };
+
+  const listFields = ['quarters', 'themes', 'tasks', 'accomplishments', 'blockers', 'next_steps', 'personas', 'changes', 'options', 'target_users'];
+  const numberFields = ['duration_weeks'];
+
+  function updateFields() {
+    const type = document.getElementById('docType').value;
+    const container = document.getElementById('dynamicFields');
+    const fields = fieldDefs[type] || [];
+    let html = '';
+    fields.forEach(f => {
+      html += '<div class="form-group"><label for="field_' + f.key + '">' + f.label + '</label>';
+      if (f.type === 'textarea') {
+        html += '<textarea id="field_' + f.key + '" placeholder="' + f.placeholder + '"></textarea>';
+      } else {
+        html += '<input type="' + f.type + '" id="field_' + f.key + '" placeholder="' + f.placeholder + '" />';
+      }
+      html += '</div>';
+    });
+    container.innerHTML = html;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('type')) {
+    document.getElementById('docType').value = params.get('type');
+  }
+  updateFields();
+
+  let lastResult = null;
+  let pendingPayload = null;
+
+  function toggleGdocUrl() {
+    document.getElementById('gdocOptions').style.display =
+      document.getElementById('exportGdoc').checked ? 'block' : 'none';
+    if (!document.getElementById('exportGdoc').checked) {
+      document.getElementById('gdocUrlField').style.display = 'none';
+    }
+  }
+
+  function toggleGdocMode() {
+    const isExisting = document.getElementById('gdocModeExisting').checked;
+    document.getElementById('gdocUrlField').style.display = isExisting ? 'block' : 'none';
+    const newLabel = document.getElementById('gdocOptNewLabel');
+    const existLabel = document.getElementById('gdocOptExistingLabel');
+    if (isExisting) {
+      newLabel.style.borderColor = 'var(--border)';
+      newLabel.style.background = 'transparent';
+      existLabel.style.borderColor = 'var(--primary)';
+      existLabel.style.background = 'var(--primary-bg)';
+    } else {
+      newLabel.style.borderColor = 'var(--primary)';
+      newLabel.style.background = 'var(--primary-bg)';
+      existLabel.style.borderColor = 'var(--border)';
+      existLabel.style.background = 'transparent';
+    }
+  }
+
+  function extractGdocId(url) {
+    if (!url) return null;
+    const m = url.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : (url.trim() || null);
+  }
+
+  function gatherInputs() {
+    const docType = document.getElementById('docType').value;
+    const title = document.getElementById('docTitle').value || undefined;
+    const exportGdoc = document.getElementById('exportGdoc').checked;
+    const gdocModeExisting = document.getElementById('gdocModeExisting').checked;
+    const gdocUrl = document.getElementById('gdocDocUrl').value.trim();
+    const gdocDocumentId = (exportGdoc && gdocModeExisting) ? extractGdocId(gdocUrl) : null;
+    const fields = fieldDefs[docType] || [];
+    const inputs = {};
+    fields.forEach(f => {
+      const el = document.getElementById('field_' + f.key);
+      if (!el) return;
+      let val = el.value.trim();
+      if (!val) return;
+      if (listFields.includes(f.key)) {
+        const sep = val.includes(',') ? ',' : '\n';
+        inputs[f.key] = val.split(sep).map(s => s.trim()).filter(Boolean);
+      } else if (numberFields.includes(f.key)) {
+        inputs[f.key] = parseInt(val) || 2;
+      } else {
+        inputs[f.key] = val;
+      }
+    });
+    return { docType, title, exportGdoc, gdocDocumentId, inputs };
+  }
+
+  async function handleGenerate(e) {
+    e.preventDefault();
+    const { docType, title, exportGdoc, gdocDocumentId, inputs } = gatherInputs();
+    const challengeFirst = document.getElementById('challengeFirst').checked;
+
+    const btn = document.getElementById('genBtn');
+    btn.disabled = true;
+    document.getElementById('alertBox').innerHTML = '';
+    document.getElementById('resultArea').style.display = 'none';
+    document.getElementById('challengeArea').style.display = 'none';
+    document.getElementById('gdocLink').style.display = 'none';
+    document.getElementById('gdocError').style.display = 'none';
+
+    if (challengeFirst) {
+      btn.innerHTML = '<span class="spinner"></span> Challenging...';
+      try {
+        const res = await fetch('/api/challenge', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ doc_type: docType, inputs: inputs })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Challenge failed');
+        showChallenge(data);
+        pendingPayload = { doc_type: docType, title, inputs, export_to_gdoc: exportGdoc, gdoc_document_id: gdocDocumentId };
+      } catch (err) {
+        document.getElementById('alertBox').innerHTML =
+          '<div class="alert alert-error">' + escapeHtml(err.message) + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Generate';
+      }
+    } else {
+      await doGenerate({ doc_type: docType, title, inputs, export_to_gdoc: exportGdoc, gdoc_document_id: gdocDocumentId });
+    }
+  }
+
+  function showChallenge(data) {
+    let html = '';
+    const score = data.clarity_score || 0;
+    const scoreColor = score >= 7 ? 'var(--success)' : score >= 4 ? 'var(--warning)' : 'var(--danger)';
+    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">';
+    html += '<div style="font-size:36px;font-weight:700;color:' + scoreColor + ';">' + score + '</div>';
+    html += '<div><div style="font-size:13px;color:var(--text-muted);">Clarity Score</div>';
+    html += '<div style="font-size:14px;font-weight:600;">' + escapeHtml(data.recommendation || '') + '</div></div></div>';
+    if (data.overall_assessment) {
+      html += '<p style="margin-bottom:16px;font-size:14px;">' + escapeHtml(data.overall_assessment) + '</p>';
+    }
+    if (data.questions && data.questions.length) {
+      html += '<div style="margin-bottom:16px;"><h4 style="font-size:14px;margin-bottom:8px;">Clarifying Questions:</h4>';
+      data.questions.forEach((q, i) => {
+        html += '<div style="padding:10px 14px;background:var(--bg);border-radius:8px;margin-bottom:8px;">';
+        html += '<div style="font-weight:600;font-size:14px;">' + (i+1) + '. ' + escapeHtml(q.question) + '</div>';
+        if (q.why_it_matters) html += '<div style="font-size:13px;color:var(--text-muted);margin-top:4px;">' + escapeHtml(q.why_it_matters) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    if (data.risks && data.risks.length) {
+      html += '<div><h4 style="font-size:14px;margin-bottom:8px;">Risks Identified:</h4>';
+      data.risks.forEach(r => {
+        html += '<div style="padding:6px 10px;font-size:13px;color:var(--danger);">&#9888; ' + escapeHtml(r) + '</div>';
+      });
+      html += '</div>';
+    }
+    if (data.recommendation_rationale) {
+      html += '<p style="margin-top:12px;font-size:13px;color:var(--text-muted);"><strong>Rationale:</strong> ' + escapeHtml(data.recommendation_rationale) + '</p>';
+    }
+    document.getElementById('challengeContent').innerHTML = html;
+    document.getElementById('challengeArea').style.display = 'block';
+    document.getElementById('challengeArea').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function proceedAfterChallenge() {
+    if (!pendingPayload) return;
+    document.getElementById('challengeArea').style.display = 'none';
+    await doGenerate(pendingPayload);
+    pendingPayload = null;
+  }
+
+  function cancelChallenge() {
+    document.getElementById('challengeArea').style.display = 'none';
+    pendingPayload = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function doGenerate(payload) {
+    const btn = document.getElementById('genBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Generating...';
+    document.getElementById('alertBox').innerHTML = '';
+    document.getElementById('resultArea').style.display = 'none';
+    document.getElementById('gdocLink').style.display = 'none';
+    document.getElementById('gdocError').style.display = 'none';
+
+    try {
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Generation failed');
+
+      lastResult = data.output;
+      document.getElementById('resultJson').innerHTML = formatJsonHtml(data.output);
+      document.getElementById('resultArea').style.display = 'block';
+
+      if (data.google_doc && data.google_doc.url) {
+        document.getElementById('gdocUrl').href = data.google_doc.url;
+        const isUpdate = payload.gdoc_document_id;
+        document.getElementById('gdocLabel').textContent = isUpdate ? 'Added to Google Doc: ' : 'Exported to Google Docs: ';
+        document.getElementById('gdocLink').style.display = 'block';
+      }
+      if (data.google_doc_error) {
+        const errEl = document.getElementById('gdocError');
+        errEl.textContent = 'Google Docs export failed: ' + data.google_doc_error;
+        errEl.style.display = 'block';
+      }
+
+      document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-error">' + escapeHtml(err.message) + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Generate';
+    }
+  }
+
+  function copyResult() {
+    if (lastResult) {
+      navigator.clipboard.writeText(JSON.stringify(lastResult, null, 2));
+    }
+  }
+</script>
+{% endblock %}

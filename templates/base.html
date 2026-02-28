@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}AI CPO Agent{% endblock %}</title>
+  <style>
+    :root {
+      --sidebar-bg: #1a1d2e;
+      --sidebar-hover: #252940;
+      --sidebar-active: #2d3250;
+      --sidebar-text: #a0a3b5;
+      --sidebar-text-active: #ffffff;
+      --sidebar-width: 250px;
+      --topbar-height: 56px;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --bg: #f4f5f9;
+      --card-bg: #ffffff;
+      --text: #1e1e2d;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      transition: transform 0.3s;
+    }
+    .sidebar-brand {
+      padding: 20px 24px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-brand span { color: var(--primary); }
+    .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 8px;
+      color: var(--sidebar-text); text-decoration: none;
+      font-size: 14px; font-weight: 500;
+      transition: all 0.15s;
+    }
+    .sidebar-nav a:hover { background: var(--sidebar-hover); color: #fff; }
+    .sidebar-nav a.active { background: var(--sidebar-active); color: var(--sidebar-text-active); }
+    .sidebar-nav a svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .sidebar-bottom { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .sidebar-bottom .logout-btn {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; padding: 10px 14px; border-radius: 8px;
+      background: none; border: 1px solid rgba(255,255,255,0.08);
+      color: var(--sidebar-text); cursor: pointer;
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      transition: all 0.2s;
+    }
+    .sidebar-bottom .logout-btn:hover {
+      background: rgba(239,68,68,0.1);
+      border-color: rgba(239,68,68,0.25);
+      color: #fca5a5;
+    }
+    .sidebar-bottom .logout-btn svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+    .sidebar-bottom .logout-btn:hover svg { opacity: 1; }
+
+    .main-area {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      height: var(--topbar-height);
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-title { font-size: 16px; font-weight: 600; }
+    .topbar-user {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--text-muted);
+    }
+    .topbar-user .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600;
+    }
+    .content { padding: 28px; flex: 1; }
+
+    .no-sidebar .sidebar { display: none; }
+    .no-sidebar .main-area { margin-left: 0; }
+    .no-sidebar .topbar { display: none; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px;
+      font-size: 14px; font-weight: 600;
+      border: none; cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block; margin-bottom: 6px;
+      font-size: 13px; font-weight: 600; color: var(--text);
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px 14px;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; font-family: inherit;
+      background: #fff; color: var(--text);
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+    .form-group textarea { resize: vertical; min-height: 100px; }
+
+    .alert {
+      padding: 12px 16px; border-radius: 8px;
+      font-size: 14px; margin-bottom: 16px;
+    }
+    .alert-error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+    .alert-success { background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0; }
+
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+      animation: toastIn 0.3s ease-out;
+      max-width: 380px;
+    }
+    .toast.toast-out { animation: toastOut 0.3s ease-in forwards; }
+    .toast-success { background: #059669; color: #fff; }
+    .toast-error { background: #dc2626; color: #fff; }
+    .toast-icon { flex-shrink: 0; }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes toastOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(40px); } }
+
+    .spinner {
+      display: inline-block; width: 20px; height: 20px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    tr:hover td { background: #f9fafb; }
+
+    .badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .badge-prd { background: #ede9fe; color: #7c3aed; }
+    .badge-roadmap { background: #dbeafe; color: #2563eb; }
+    .badge-sprint { background: #d1fae5; color: #059669; }
+    .badge-recap { background: #fff3e0; color: #e65100; }
+    .badge-feature_spec { background: #fce7f3; color: #db2777; }
+    .badge-user_stories { background: #e0f2fe; color: #0284c7; }
+    .badge-technical_handoff { background: #f0fdf4; color: #16a34a; }
+    .badge-release_notes { background: #fef3c7; color: #d97706; }
+    .badge-strategy_memo { background: #f0e7fe; color: #9333ea; }
+
+    .hamburger {
+      display: none; background: none; border: none; cursor: pointer;
+      padding: 4px; color: var(--text);
+    }
+    .hamburger svg { width: 24px; height: 24px; }
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); z-index: 99;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .main-area { margin-left: 0; }
+      .hamburger { display: block; }
+      .content { padding: 16px; }
+    }
+
+    .json-viewer { background: #0f172a; color: #e2e8f0; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+    .json-key { color: #93c5fd; }
+    .json-string { color: #86efac; }
+    .json-number { color: #fbbf24; }
+    .json-bool { color: #f472b6; }
+    .json-null { color: #94a3b8; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="layout {% block layout_class %}{% endblock %}" id="appLayout">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div id="sidebarLogo" style="display:none;width:28px;height:28px;border-radius:6px;overflow:hidden;flex-shrink:0;">
+          <img id="sidebarLogoImg" src="" style="width:100%;height:100%;object-fit:cover;" />
+        </div>
+        <svg id="sidebarDefaultIcon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <span id="sidebarBrandText"><span>The</span> Six</span>
+      </div>
+      <div class="sidebar-nav">
+        <a href="/app/agents" id="nav-agents">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          AI C-Suite
+        </a>
+        <a href="/app/settings" id="nav-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </a>
+        <a href="/app/guide" id="nav-guide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Getting Started
+        </a>
+        <a href="/app/documents" id="nav-documents">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          My Documents
+        </a>
+      </div>
+      <div class="sidebar-bottom">
+        <div id="sidebarTimezone" style="display:none;padding:0 16px 12px;font-size:12px;color:var(--text-muted);">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span id="sidebarTzLabel"></span>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Log out
+        </button>
+      </div>
+    </nav>
+    <div class="main-area">
+      <header class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="hamburger" onclick="toggleSidebar()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <span class="topbar-title">{% block page_title %}{% endblock %}</span>
+        </div>
+        <div class="topbar-user">
+          <span id="userEmail"></span>
+          <div class="avatar" id="userAvatar"></div>
+        </div>
+      </header>
+      <div class="toast-container" id="toastContainer"></div>
+      <main class="content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const API_KEY = localStorage.getItem('cpo_api_key');
+    const USER_EMAIL = localStorage.getItem('cpo_email');
+
+    function isProtectedPage() {
+      return window.location.pathname.startsWith('/app/') && window.location.pathname !== '/app/auth';
+    }
+
+    if (isProtectedPage() && !API_KEY) {
+      window.location.href = '/app/auth';
+    }
+
+    const FIRST_NAME = localStorage.getItem('cpo_first_name') || '';
+    const ROLE = localStorage.getItem('cpo_role') || '';
+    const COMPANY_NAME = localStorage.getItem('cpo_company_name') || '';
+    const COMPANY_LOGO = localStorage.getItem('cpo_company_logo') || '';
+    const USER_TIMEZONE = localStorage.getItem('cpo_timezone') || 'US/Eastern';
+
+    if (USER_EMAIL || FIRST_NAME) {
+      const emailEl = document.getElementById('userEmail');
+      const avatarEl = document.getElementById('userAvatar');
+      const displayName = FIRST_NAME || USER_EMAIL;
+      const roleTag = ROLE ? ROLE + ': ' : '';
+      if (emailEl) emailEl.textContent = roleTag + displayName;
+      if (avatarEl) avatarEl.textContent = (FIRST_NAME || USER_EMAIL || '?').charAt(0).toUpperCase();
+    }
+
+    if (COMPANY_LOGO) {
+      const sidebarLogo = document.getElementById('sidebarLogo');
+      const sidebarLogoImg = document.getElementById('sidebarLogoImg');
+      const defaultIcon = document.getElementById('sidebarDefaultIcon');
+      if (sidebarLogo && sidebarLogoImg) {
+        sidebarLogoImg.src = COMPANY_LOGO;
+        sidebarLogo.style.display = 'block';
+        if (defaultIcon) defaultIcon.style.display = 'none';
+      }
+    }
+
+    if (COMPANY_NAME) {
+      const brandText = document.getElementById('sidebarBrandText');
+      if (brandText) brandText.textContent = COMPANY_NAME;
+    }
+
+    function setActiveNav() {
+      const path = window.location.pathname;
+      document.querySelectorAll('.sidebar-nav a').forEach(a => {
+        a.classList.remove('active');
+        if (path.startsWith(a.getAttribute('href'))) {
+          a.classList.add('active');
+        }
+      });
+    }
+    setActiveNav();
+
+    function showToast(message, type) {
+      type = type || 'success';
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-' + type;
+      const icon = type === 'success'
+        ? '<svg class="toast-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>'
+        : '<svg class="toast-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+      toast.innerHTML = icon + '<span>' + message + '</span>';
+      container.appendChild(toast);
+      setTimeout(function() {
+        toast.classList.add('toast-out');
+        setTimeout(function() { toast.remove(); }, 300);
+      }, 3000);
+    }
+
+    function authHeaders() {
+      return { 'Authorization': 'Bearer ' + API_KEY, 'Content-Type': 'application/json' };
+    }
+
+    function formatDate(isoString) {
+      if (!isoString) return '';
+      try {
+        var tz = localStorage.getItem('cpo_timezone') || 'US/Eastern';
+        return new Date(isoString).toLocaleDateString('en-US', { timeZone: tz, month: 'short', day: 'numeric', year: 'numeric' });
+      } catch(e) {
+        return new Date(isoString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+    }
+
+    function formatDateTime(isoString) {
+      if (!isoString) return '';
+      try {
+        var tz = localStorage.getItem('cpo_timezone') || 'US/Eastern';
+        return new Date(isoString).toLocaleString('en-US', { timeZone: tz, month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' });
+      } catch(e) {
+        return new Date(isoString).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+      }
+    }
+
+    function updateTimezoneDisplay() {
+      var tz = localStorage.getItem('cpo_timezone') || 'US/Eastern';
+      var el = document.getElementById('sidebarTimezone');
+      var label = document.getElementById('sidebarTzLabel');
+      if (el && label) {
+        try {
+          var now = new Date();
+          var timeStr = now.toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' });
+          label.textContent = timeStr;
+          el.style.display = 'block';
+        } catch(e) {
+          el.style.display = 'none';
+        }
+      }
+    }
+    updateTimezoneDisplay();
+    setInterval(updateTimezoneDisplay, 60000);
+
+    if (API_KEY && !localStorage.getItem('cpo_timezone')) {
+      fetch('/me/profile', { headers: { 'Authorization': 'Bearer ' + API_KEY } })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (data && data.timezone) {
+            localStorage.setItem('cpo_timezone', data.timezone);
+            updateTimezoneDisplay();
+          }
+        })
+        .catch(function() {});
+    }
+
+    function logout() {
+      localStorage.removeItem('cpo_api_key');
+      localStorage.removeItem('cpo_email');
+      localStorage.removeItem('cpo_first_name');
+      localStorage.removeItem('cpo_role');
+      localStorage.removeItem('cpo_company_name');
+      localStorage.removeItem('cpo_company_logo');
+      localStorage.removeItem('cpo_timezone');
+      window.location.href = '/app/auth';
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    function formatJsonHtml(obj, indent) {
+      indent = indent || 0;
+      const pad = '  '.repeat(indent);
+      const pad1 = '  '.repeat(indent + 1);
+      if (obj === null) return '<span class="json-null">null</span>';
+      if (typeof obj === 'boolean') return '<span class="json-bool">' + obj + '</span>';
+      if (typeof obj === 'number') return '<span class="json-number">' + obj + '</span>';
+      if (typeof obj === 'string') return '<span class="json-string">"' + escapeHtml(obj) + '"</span>';
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return '[]';
+        let items = obj.map(v => pad1 + formatJsonHtml(v, indent + 1));
+        return '[\n' + items.join(',\n') + '\n' + pad + ']';
+      }
+      const keys = Object.keys(obj);
+      if (keys.length === 0) return '{}';
+      let entries = keys.map(k => pad1 + '<span class="json-key">"' + escapeHtml(k) + '"</span>: ' + formatJsonHtml(obj[k], indent + 1));
+      return '{\n' + entries.join(',\n') + '\n' + pad + '}';
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

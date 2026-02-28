@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Strategy Memo",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string" },
+    "date": { "type": "string" },
+    "executive_summary": { "type": "string" },
+    "context": { "type": "string" },
+    "strategic_options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "option": { "type": "string" },
+          "pros": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "cons": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "risk_level": { "type": "string" }
+        },
+        "required": ["option", "pros", "cons"]
+      }
+    },
+    "recommendation": { "type": "string" },
+    "rationale": { "type": "string" },
+    "success_metrics": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "timeline": { "type": "string" },
+    "resource_requirements": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["title", "executive_summary", "context", "strategic_options", "recommendation"]
+}

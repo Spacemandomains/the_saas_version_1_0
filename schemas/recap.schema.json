@@ -1,0 +1,52 @@
+{
+  "type": "object",
+  "properties": {
+    "date": { "type": "string" },
+    "executive_summary": { "type": "string" },
+    "key_accomplishments": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "decisions_made": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "decision": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "blockers_and_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "issue": { "type": "string" },
+          "status": { "type": "string" },
+          "mitigation": { "type": "string" }
+        }
+      }
+    },
+    "metrics_update": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task": { "type": "string" },
+          "owner": { "type": "string" },
+          "due": { "type": "string" }
+        }
+      }
+    }
+  },
+  "required": ["date", "executive_summary", "key_accomplishments", "next_steps"]
+}

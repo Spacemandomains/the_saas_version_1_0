@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User Stories",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string" },
+    "epic_summary": { "type": "string" },
+    "personas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string" },
+          "goals": { "type": "string" }
+        },
+        "required": ["name", "role", "goals"]
+      }
+    },
+    "stories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "as_a": { "type": "string" },
+          "i_want": { "type": "string" },
+          "so_that": { "type": "string" },
+          "acceptance_criteria": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "priority": { "type": "string" },
+          "story_points": { "type": "integer" }
+        },
+        "required": ["id", "as_a", "i_want", "so_that", "acceptance_criteria"]
+      }
+    },
+    "total_story_points": { "type": "integer" }
+  },
+  "required": ["title", "epic_summary", "personas", "stories"]
+}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AI CPO Agent (Gemini) MVP</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto; max-width: 980px; margin: 24px auto; padding: 0 16px; }
+      .card { border: 1px solid #ddd; border-radius: 12px; padding: 14px; margin: 12px 0; }
+      code, pre { background: #0b1020; color: #e6e6e6; padding: 10px; border-radius: 10px; overflow:auto; display:block; }
+      .muted { color: #666; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <h1>AI CPO Agent — Gemini MVP</h1>
+    <p class="muted">Use the API via Swagger and an API key. This page is just a sanity check that the server is running.</p>
+
+    <div class="card">
+      <h3>Quick start</h3>
+      <p>Open Swagger:</p>
+      <pre>GET /docs</pre>
+      <p>Flow:</p>
+      <pre>
+1) POST /auth/signup  -> get api_key
+2) POST /me/product-brief -> save your product context
+3) POST /api/agent -> generate prd|roadmap|sprint
+      </pre>
+    </div>
+
+    <div class="card">
+      <h3>Example request</h3>
+      <p class="muted">Add header: <code>Authorization: Bearer YOUR_API_KEY</code></p>
+      <pre>{
+  "doc_type": "roadmap",
+  "title": "Q2 Roadmap",
+  "inputs": {
+    "quarters": ["Q2"],
+    "themes": ["Activation", "Retention"]
+  }
+}</pre>
+    </div>
+  </body>
+</html>

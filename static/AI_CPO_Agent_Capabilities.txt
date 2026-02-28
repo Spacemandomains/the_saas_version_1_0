@@ -1,0 +1,123 @@
+===============================================================
+         AI CPO AGENT — FULL CAPABILITIES LIST
+              The Six SaaS | AI C-Suite
+===============================================================
+
+
+CORE DOCUMENTS
+---------------------------------------------------------------
+
+1. PRD (Product Requirements Document)
+   Generate a structured product requirements document for any
+   feature. Includes problem statement, proposed solution,
+   user stories, acceptance criteria, and success metrics.
+
+2. Roadmap
+   Create a quarterly product roadmap organized by themes
+   and priorities. Includes timeline, milestones, and
+   strategic alignment.
+
+3. Sprint Plan
+   Break work into actionable sprint tasks with RICE/ICE
+   priority scoring. Includes task assignments, effort
+   estimates, and sprint goals.
+
+4. Daily Recap
+   Write a daily status update — perfect for "building in
+   public" posts. Includes accomplishments, blockers, next
+   steps, and action items with owners and due dates.
+
+
+FEATURE & ENGINEERING
+---------------------------------------------------------------
+
+5. Feature Specification
+   Detailed feature specification with functional requirements,
+   edge cases, dependencies, and acceptance criteria. Ready
+   for engineering handoff.
+
+6. User Stories
+   Persona-based user stories for any epic or feature area.
+   Follows "As a [user], I want [goal], so that [benefit]"
+   format with acceptance criteria.
+
+7. Technical Handoff Document
+   Engineering handoff document with tech stack details,
+   architecture notes, constraints, implementation guidance,
+   and testing requirements.
+
+
+STRATEGY & COMMUNICATION
+---------------------------------------------------------------
+
+8. Release Notes
+   User-facing release notes for any version. Covers new
+   features, improvements, bug fixes, and breaking changes
+   in clear, non-technical language.
+
+9. Strategy Memo
+   Executive strategy analysis with background context,
+   options to consider, tradeoffs, risks, and a clear
+   recommendation. Great for big product decisions.
+
+
+STRATEGY TOOLS
+---------------------------------------------------------------
+
+10. Product Brief
+    Set your core product context — product name, vision,
+    target user, current stage, and goals. This is
+    automatically included in every document the AI generates
+    so it always has full context.
+
+11. ICP & Value Proposition
+    Define your Ideal Customer Profile including target
+    market, customer segments, pain points, current
+    alternatives, and your key differentiators.
+    Auto-included in all AI generation.
+
+12. PMF Signals (Product-Market Fit)
+    Log signals that indicate product-market fit:
+    - User feedback quotes
+    - Metric observations
+    - Market patterns
+    - Interview notes
+    All signals are auto-included in AI generation context.
+
+13. Metrics Dashboard
+    Track key product metrics with AI-powered insights:
+    - Activation rate
+    - Retention rate
+    - Churn rate
+    - Monthly revenue (MRR)
+    Get AI analysis including health score, trend analysis,
+    warnings, recommendations, and PMF assessment.
+
+
+CROSS-CUTTING FEATURES
+---------------------------------------------------------------
+
+14. Executive Challenge Mode
+    Before generating any document, the AI acts as a rigorous
+    CPO and reviews your request:
+    - Scores clarity on a 1-10 scale
+    - Asks 3-5 pointed clarifying questions
+    - Flags "shiny object syndrome" risks
+    - Recommends: proceed, refine, or reconsider
+
+15. Google Docs Export
+    Two options for every document:
+    a) Create New Doc — starts a fresh Google Doc
+    b) Add to Existing Doc — appends to a Google Doc you
+       already manage (paste the URL)
+    Perfect for maintaining a running document like your
+    "SaaS Building in Public" log.
+
+16. Context Aggregation
+    Every document the AI generates automatically includes:
+    - Your Product Brief
+    - Your ICP & Value Proposition
+    - Recent PMF Signals (last 20)
+    - Recent Metrics Snapshots (last 6)
+    This means the AI always has full strategic context,
+    producing smarter, more relevant documents every time.

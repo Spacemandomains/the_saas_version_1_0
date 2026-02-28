@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}PMF Signals — AI CPO Agent{% endblock %}
+{% block page_title %}Product-Market Fit Signals{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;">
+  <div class="card" style="margin-bottom:24px;">
+    <h3 style="font-size:18px;margin-bottom:4px;">Capture PMF Signals</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">Log user feedback, metric patterns, and market signals. The AI uses these to make smarter product decisions across all documents.</p>
+    <div id="alertBox"></div>
+    <form onsubmit="addSignal(event)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label for="signalType">Signal Type</label>
+          <select id="signalType">
+            <option value="feedback">User Feedback</option>
+            <option value="metric">Metric Observation</option>
+            <option value="pattern">Usage Pattern</option>
+            <option value="interview">User Interview</option>
+            <option value="support">Support Ticket</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="sentiment">Sentiment</label>
+          <select id="sentiment">
+            <option value="positive">Positive</option>
+            <option value="neutral">Neutral</option>
+            <option value="negative">Negative</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="signalContent">Signal Details</label>
+        <textarea id="signalContent" placeholder="e.g. 3 users this week asked for team collaboration features. They're currently sharing docs via email." style="min-height:80px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="source">Source</label>
+        <input type="text" id="source" placeholder="e.g. Intercom chat, User interview, Analytics dashboard" />
+      </div>
+      <button type="submit" class="btn btn-primary" id="addBtn">Add Signal</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:16px;">Signal Log</h3>
+      <span id="signalCount" style="font-size:13px;color:var(--text-muted);"></span>
+    </div>
+    <div id="signalsList">
+      <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:24px 0;">Loading...</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function loadSignals() {
+    const container = document.getElementById('signalsList');
+    try {
+      const res = await fetch('/me/pmf-signals', { headers: authHeaders() });
+      if (!res.ok) throw new Error('Failed to load');
+      const signals = await res.json();
+      document.getElementById('signalCount').textContent = signals.length + ' signal(s)';
+      if (signals.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted);font-size:14px;text-align:center;padding:24px 0;">No signals captured yet. Add your first one above!</p>';
+        return;
+      }
+      let html = '';
+      signals.forEach(s => {
+        const sentimentColors = { positive: '#10b981', negative: '#ef4444', neutral: '#6b7280' };
+        const sentimentIcons = { positive: '+', negative: '-', neutral: '~' };
+        const typeLabels = { feedback: 'Feedback', metric: 'Metric', pattern: 'Pattern', interview: 'Interview', support: 'Support', other: 'Other' };
+        const date = formatDate(s.created_at);
+        html += '<div style="padding:14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">';
+        html += '<div style="flex:1;">';
+        html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">';
+        html += '<span class="badge" style="background:#ede9fe;color:#7c3aed;">' + (typeLabels[s.signal_type] || s.signal_type) + '</span>';
+        html += '<span style="width:20px;height:20px;border-radius:50%;background:' + (sentimentColors[s.sentiment] || '#6b7280') + ';color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">' + (sentimentIcons[s.sentiment] || '~') + '</span>';
+        if (s.source) html += '<span style="font-size:12px;color:var(--text-muted);">from ' + escapeHtml(s.source) + '</span>';
+        html += '</div>';
+        html += '<p style="font-size:14px;margin:0;">' + escapeHtml(s.content) + '</p>';
+        html += '<span style="font-size:12px;color:var(--text-muted);">' + date + '</span>';
+        html += '</div>';
+        html += '<button onclick="deleteSignal(' + s.id + ')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;" title="Delete">';
+        html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+        html += '</button></div></div>';
+      });
+      container.innerHTML = html;
+    } catch (e) {
+      container.innerHTML = '<p style="color:var(--danger);font-size:14px;">Failed to load signals.</p>';
+    }
+  }
+
+  async function addSignal(e) {
+    e.preventDefault();
+    const btn = document.getElementById('addBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Adding...';
+    document.getElementById('alertBox').innerHTML = '';
+
+    const content = document.getElementById('signalContent').value.trim();
+    if (!content) {
+      document.getElementById('alertBox').innerHTML = '<div class="alert alert-error">Please enter signal details.</div>';
+      btn.disabled = false;
+      btn.innerHTML = 'Add Signal';
+      return;
+    }
+
+    try {
+      const res = await fetch('/me/pmf-signals', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          signal_type: document.getElementById('signalType').value,
+          content: content,
+          source: document.getElementById('source').value.trim(),
+          sentiment: document.getElementById('sentiment').value,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to add signal');
+      document.getElementById('signalContent').value = '';
+      document.getElementById('source').value = '';
+      loadSignals();
+    } catch (err) {
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-error">' + escapeHtml(err.message) + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Add Signal';
+    }
+  }
+
+  async function deleteSignal(id) {
+    if (!confirm('Delete this signal?')) return;
+    try {
+      const res = await fetch('/me/pmf-signals/' + id, {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+      if (!res.ok) throw new Error('Failed to delete');
+      loadSignals();
+    } catch (e) {
+      alert('Failed to delete signal');
+    }
+  }
+
+  loadSignals();
+</script>
+{% endblock %}

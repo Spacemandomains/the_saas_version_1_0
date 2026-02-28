@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% block title %}Getting Started — AI C-Suite{% endblock %}
+{% block page_title %}Getting Started{% endblock %}
+
+{% block extra_css %}
+<style>
+  .guide-container { max-width: 720px; }
+  .guide-container h2 { font-size: 20px; margin-top: 32px; margin-bottom: 12px; }
+  .guide-container h3 { font-size: 16px; margin-top: 24px; margin-bottom: 8px; }
+  .guide-container p, .guide-container li { font-size: 14px; line-height: 1.7; color: var(--text-secondary); }
+  .guide-container ul, .guide-container ol { padding-left: 20px; margin-bottom: 16px; }
+  .guide-container li { margin-bottom: 6px; }
+  .guide-container .step-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .guide-container .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-right: 12px;
+  }
+  .guide-container .step-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .guide-container .step-title {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .guide-container .step-body {
+    margin-left: 40px;
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .guide-container .tip-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13px;
+    color: #1e40af;
+    line-height: 1.6;
+  }
+  .guide-container .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 32px 0;
+  }
+  .toc {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+  }
+  .toc-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .toc a { display: block; font-size: 14px; color: var(--primary); text-decoration: none; padding: 4px 0; }
+  .toc a:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="guide-container">
+  <div style="margin-bottom:24px;">
+    <p style="font-size:15px;color:var(--text-muted);margin:0;">
+      Everything you need to set up and use your AI C-Suite. Follow the steps below to get your AI Chief Product Officer running in under 5 minutes.
+    </p>
+  </div>
+
+  <div class="toc">
+    <div class="toc-title">On this page</div>
+    <a href="#quick-start">Quick Start (5 minutes)</a>
+    <a href="#google-doc-setup">Setting Up Your Google Docs</a>
+    <a href="#how-cpo-works">How the AI CPO Works</a>
+    <a href="#doc-format">Google Doc Format</a>
+    <a href="#output-format">What the AI CPO Writes</a>
+    <a href="#settings-guide">Settings Guide</a>
+    <a href="#team">Adding Your Team</a>
+    <a href="#faq">FAQ</a>
+  </div>
+
+  <h2 id="quick-start">Quick Start</h2>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num" style="background:#dbeafe;color:#2563eb;">1</div>
+      <div class="step-title">Create your account</div>
+    </div>
+    <div class="step-body">
+      Sign up with your email and password. Enter your first name and company name — these personalize your AI C-Suite experience.
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num" style="background:#d1fae5;color:#059669;">2</div>
+      <div class="step-title">Create two Google Docs</div>
+    </div>
+    <div class="step-body">
+      <strong>Source Doc</strong> — This is where you write your "Dear CPO" messages. The AI CPO reads from this doc.<br>
+      <strong>Output Doc</strong> — This is where the AI CPO writes its Daily Recap and CPO Brief. We recommend keeping these separate so your notes stay clean.<br>
+      <strong>Recap Doc</strong> — (Optional) A customer-facing document where a polished daily CPO Recap is written every day at your chosen time (default 6 PM).
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num" style="background:#ede9fe;color:#7c3aed;">3</div>
+      <div class="step-title">Open the AI CPO from the C-Suite page</div>
+    </div>
+    <div class="step-body">
+      Click the <strong>AI CPO</strong> card on your AI C-Suite page to open the CPO Dashboard.
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num" style="background:#fef3c7;color:#d97706;">4</div>
+      <div class="step-title">Configure CPO Settings</div>
+    </div>
+    <div class="step-body">
+      Scroll to the <strong>CPO Settings</strong> section on the dashboard:
+      <ul style="margin-top:8px;">
+        <li>Paste your <strong>Source Google Doc</strong> URL or document ID</li>
+        <li>Paste your <strong>Output Google Doc</strong> URL or document ID</li>
+        <li>Select your <strong>timezone</strong></li>
+        <li>Toggle <strong>AI CPO Active</strong> on</li>
+        <li>Click <strong>Save Automation Settings</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num" style="background:#fce7f3;color:#db2777;">5</div>
+      <div class="step-title">Write in your Google Doc</div>
+    </div>
+    <div class="step-body">
+      Write <strong>"Dear CPO"</strong> in your source doc followed by your message. The AI CPO will detect it automatically and generate output. No special headings needed.
+    </div>
+  </div>
+
+  <div class="tip-box">
+    That's it! Once active, the AI CPO monitors your source doc on a schedule you control. No manual triggers needed — just write and the AI handles the rest.
+  </div>
+
+  <hr class="section-divider">
+
+  <h2 id="google-doc-setup">Setting Up Your Google Docs</h2>
+
+  <p>You need two Google Docs (or one, but two is recommended):</p>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">Source Doc (Your Notes)</h3>
+    <ul>
+      <li>Create a new Google Doc or use an existing one</li>
+      <li>This is where you write your "Dear CPO" messages — thoughts, decisions, questions</li>
+      <li>The AI CPO <strong>reads</strong> from this doc but never overwrites your entries</li>
+      <li>The only thing the CPO adds here is its daily question for you</li>
+    </ul>
+  </div>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">Output Doc (CPO Writes Here)</h3>
+    <ul>
+      <li>Create a separate Google Doc for AI CPO output</li>
+      <li>The Daily Recap and CPO Brief get written here under dated headings</li>
+      <li>Keeps your source doc clean and your CPO output organized</li>
+    </ul>
+  </div>
+
+  <div class="tip-box">
+    To get your document ID: open the Google Doc, look at the URL — the ID is the long string between <code>/d/</code> and <code>/edit</code>. You can also paste the full URL and the system will extract the ID for you.
+  </div>
+
+  <hr class="section-divider">
+
+  <h2 id="how-cpo-works">How the AI CPO Works</h2>
+
+  <p>The AI CPO runs on autopilot. Here's the cycle:</p>
+
+  <ol>
+    <li><strong>Monitors</strong> — Checks your source Google Doc on a schedule (default: every 30 minutes)</li>
+    <li><strong>Detects "Dear CPO" messages</strong> — Uses a content fingerprint to detect when you've written new messages</li>
+    <li><strong>Generates output</strong> — Produces a Daily Recap and CPO Brief using AI</li>
+    <li><strong>Writes to output doc</strong> — Appends the output under dated headings in your output Google Doc</li>
+    <li><strong>Asks you a question</strong> — Appends one strategic question back to your source doc for you to answer next time</li>
+    <li><strong>Daily CPO Recap</strong> — At your chosen time (default 6 PM), writes a polished, customer-facing product update to your Recap Doc</li>
+  </ol>
+
+  <div class="tip-box">
+    The monitoring interval is configurable from 5 minutes to 24 hours. You can change it anytime in the CPO Settings on the dashboard.
+  </div>
+
+  <hr class="section-divider">
+
+  <h2 id="doc-format">Google Doc Format</h2>
+
+  <p>For best results, structure your source Google Doc like this:</p>
+
+  <div class="step-card" style="font-family:monospace;font-size:13px;line-height:1.8;background:#f8fafc;">
+    <div style="color:#7c3aed;font-weight:700;">Dear CPO,</div>
+    <br>
+    <div>Had a call with two potential customers today.</div>
+    <div>They both asked about team collaboration features.</div>
+    <div>Decided to push back the mobile app to Q3.</div>
+    <div>Need to hire a frontend developer soon.</div>
+    <div>Revenue hit $4k MRR this week.</div>
+    <br>
+    <div style="color:#7c3aed;font-weight:700;">Dear CPO,</div>
+    <br>
+    <div>Shipped the onboarding flow redesign.</div>
+    <div>Churn rate dropped from 8% to 6% this month.</div>
+    <div>What should I focus on this week?</div>
+  </div>
+
+  <p>Key formatting tips:</p>
+  <ul>
+    <li>Start each message with <strong>"Dear CPO"</strong> — that's how the AI knows you're talking to it</li>
+    <li>Write naturally — bullet points, paragraphs, questions all work</li>
+    <li>Include decisions, metrics, conversations, blockers, and ideas</li>
+    <li>Ask questions directly and the CPO will address them</li>
+    <li>Write as many "Dear CPO" messages as you want — they'll all be picked up</li>
+  </ul>
+
+  <h3 style="margin-top:24px;">Assigning Tasks</h3>
+  <p>You can assign tasks to the CPO by including <strong>"task:"</strong> in your message:</p>
+  <div class="step-card" style="font-family:monospace;font-size:13px;line-height:1.8;background:#f8fafc;">
+    <div style="color:#7c3aed;font-weight:700;">Dear CPO,</div>
+    <div>task: Build the new onboarding flow by March 15</div>
+    <div>task: Set up customer feedback survey</div>
+    <div>Also, we had a great call with Acme Corp today.</div>
+  </div>
+  <ul>
+    <li><strong>"task:"</strong> or <strong>"assign:"</strong> — creates a new task</li>
+    <li><strong>"by [date]"</strong> or <strong>"due [date]"</strong> — sets a deadline (e.g., "by Friday", "by March 15", "due 2026-03-01")</li>
+    <li><strong>"done:"</strong>, <strong>"completed:"</strong>, or <strong>"finished:"</strong> — marks a matching task as complete (e.g., "done: onboarding flow")</li>
+  </ul>
+  <p>Tasks show up on your CPO Dashboard and the CPO will reference them in the Daily Brief — reminding you about deadlines and flagging overdue items.</p>
+
+  <hr class="section-divider">
+
+  <h2 id="output-format">What the AI CPO Writes</h2>
+
+  <p>Every time new "Dear CPO" messages are detected, the AI CPO generates two sections in your output doc:</p>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">Daily Recap</h3>
+    <p style="margin-bottom:8px;">A structured summary of what happened:</p>
+    <ul>
+      <li><strong>Outcome of the day</strong> — One sentence: what moved forward and toward what goal</li>
+      <li><strong>What happened</strong> — 3-7 items with context and why each matters</li>
+      <li><strong>Decision made</strong> — The most important decision today. If none, the CPO proposes one</li>
+      <li><strong>Non-core topics</strong> — Anything you mentioned outside the main priority, separated out</li>
+      <li><strong>Blockers & risks</strong> — Issues that could slow you down</li>
+    </ul>
+  </div>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">Daily CPO Brief</h3>
+    <p style="margin-bottom:8px;">Actionable executive guidance:</p>
+    <ul>
+      <li><strong>Focus (next 14 days)</strong> — Your single priority with reasoning</li>
+      <li><strong>Next action</strong> — ONE specific, executable thing to do next (not a list — one clear move)</li>
+      <li><strong>One metric to watch</strong> — The number that matters most right now and why</li>
+      <li><strong>Kill list</strong> — Max 3 things to stop doing today, with reasons</li>
+      <li><strong>Non-core topics</strong> — Acknowledged but separated from strategic guidance</li>
+      <li><strong>One question for founder</strong> — A strategic question appended to your source doc</li>
+    </ul>
+  </div>
+
+  <hr class="section-divider">
+
+  <h2 id="settings-guide">Settings Guide</h2>
+
+  <h3>Shared Settings (Settings page)</h3>
+  <p>These apply across your entire AI C-Suite:</p>
+  <ul>
+    <li><strong>Profile</strong> — Your name, company name, and company logo</li>
+    <li><strong>Team</strong> — Invite co-founders and team members by email</li>
+  </ul>
+
+  <h3>CPO Settings (on the CPO Dashboard)</h3>
+  <p>These are specific to the AI CPO agent:</p>
+  <ul>
+    <li><strong>Source Google Doc</strong> — The doc the CPO reads your "Dear CPO" messages from</li>
+    <li><strong>Output Google Doc</strong> — The doc the CPO writes recaps and briefs to</li>
+    <li><strong>CPO Recap Doc</strong> — A customer-facing doc for daily product updates (optional)</li>
+    <li><strong>Recap Time</strong> — When the daily customer recap is generated (default 6:00 PM)</li>
+    <li><strong>Timezone</strong> — Controls timestamps in the CPO output</li>
+    <li><strong>AI CPO Active toggle</strong> — Turn monitoring on or off</li>
+    <li><strong>Monitoring interval</strong> — How often the CPO checks for new messages (5 min to 24 hours)</li>
+  </ul>
+
+  <div class="tip-box">
+    Each AI agent in the C-Suite will have its own settings area on its dashboard. The shared Settings page is for profile and team info that applies to all agents.
+  </div>
+
+  <hr class="section-divider">
+
+  <h2 id="team">Adding Your Team</h2>
+
+  <p>You can invite co-founders, advisors, and team members:</p>
+  <ol>
+    <li>Go to <strong>Settings</strong> from the sidebar</li>
+    <li>Scroll to the <strong>Team</strong> section</li>
+    <li>Enter their email and select their role (Co-Founder, Advisor, or Team Member)</li>
+    <li>Click <strong>Send Invite</strong></li>
+  </ol>
+  <p>Team members will be able to sign up and join your company's AI C-Suite.</p>
+
+  <hr class="section-divider">
+
+  <h2 id="faq">FAQ</h2>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">How often does the AI CPO check my doc?</h3>
+    <p>By default, every 30 minutes. You can change this to anywhere between 5 minutes and 24 hours in the CPO Settings on the dashboard.</p>
+  </div>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">Does the AI CPO edit my source doc?</h3>
+    <p>No. Your source doc is read-only to the CPO. The only thing it adds is one question for you at the end of each run. All output goes to the separate output doc.</p>
+  </div>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">What if I don't set up an output doc?</h3>
+    <p>If no output doc is configured, the CPO falls back to writing in the source doc. But we strongly recommend using a separate output doc to keep things clean.</p>
+  </div>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">Will the CPO run if there are no new "Dear CPO" messages?</h3>
+    <p>No. It uses a content fingerprint to detect changes. If no new "Dear CPO" messages are found since the last check, it skips that cycle.</p>
+  </div>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">What are the other AI agents?</h3>
+    <p>The AI C-Suite will include a CTO, CFO, COO, CMO, and CHRO — all coming soon. Each will have its own dashboard and settings, and they'll share the same output docs to keep everything in one place.</p>
+  </div>
+
+  <div class="step-card">
+    <h3 style="margin-top:0;">Can I pause the AI CPO?</h3>
+    <p>Yes. Toggle the <strong>AI CPO Active</strong> switch off either on the dashboard status card or in the CPO Settings section. The CPO stops monitoring immediately.</p>
+  </div>
+</div>
+{% endblock %}

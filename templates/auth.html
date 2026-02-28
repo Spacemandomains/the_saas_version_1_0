@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Sign In — AI CPO Agent{% endblock %}
+{% block layout_class %}no-sidebar{% endblock %}
+
+{% block extra_css %}
+<style>
+  .auth-wrapper {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .auth-card {
+    background: var(--card-bg); border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 40px; width: 100%; max-width: 420px;
+  }
+  .auth-brand {
+    text-align: center; margin-bottom: 32px;
+  }
+  .auth-brand h1 { font-size: 24px; margin-bottom: 4px; }
+  .auth-brand p { color: var(--text-muted); font-size: 14px; }
+  .auth-tabs {
+    display: flex; gap: 0; margin-bottom: 24px;
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .auth-tabs button {
+    flex: 1; padding: 10px; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+    background: #fff; color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .auth-tabs button.active {
+    background: var(--primary); color: #fff;
+  }
+  .signup-fields { display: none; }
+  .signup-fields.show { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <h1>AI CPO Agent</h1>
+      <p>Sign in to your account</p>
+    </div>
+    <div class="auth-tabs">
+      <button id="tabLogin" class="active" onclick="switchTab('login')">Log In</button>
+      <button id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+    <div id="alertBox"></div>
+    <form id="authForm" onsubmit="handleAuth(event)">
+      <div class="signup-fields" id="signupFields">
+        <div class="form-group">
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" placeholder="Your first name" />
+        </div>
+        <div class="form-group">
+          <label for="companyName">Company Name</label>
+          <input type="text" id="companyName" placeholder="e.g. The Six SaaS" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required placeholder="you@company.com" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required placeholder="Min 8 characters" minlength="8" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="authBtn">
+        Log In
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  if (localStorage.getItem('cpo_api_key')) {
+    window.location.href = '/app/agents';
+  }
+
+  let mode = 'login';
+
+  function switchTab(m) {
+    mode = m;
+    document.getElementById('tabLogin').classList.toggle('active', m === 'login');
+    document.getElementById('tabSignup').classList.toggle('active', m === 'signup');
+    document.getElementById('authBtn').textContent = m === 'login' ? 'Log In' : 'Sign Up';
+    document.getElementById('signupFields').classList.toggle('show', m === 'signup');
+    document.getElementById('alertBox').innerHTML = '';
+  }
+
+  async function handleAuth(e) {
+    e.preventDefault();
+    const btn = document.getElementById('authBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    document.getElementById('alertBox').innerHTML = '';
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const url = mode === 'login' ? '/auth/login' : '/auth/signup';
+
+    const body = { email, password };
+    if (mode === 'signup') {
+      body.first_name = document.getElementById('firstName').value;
+      body.company_name = document.getElementById('companyName').value;
+    }
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'Something went wrong');
+      }
+      localStorage.setItem('cpo_api_key', data.api_key);
+      localStorage.setItem('cpo_email', email);
+      localStorage.setItem('cpo_first_name', data.first_name || '');
+      localStorage.setItem('cpo_role', data.role || 'CEO');
+      localStorage.setItem('cpo_company_name', data.company_name || '');
+      localStorage.setItem('cpo_company_logo', data.company_logo || '');
+      localStorage.setItem('cpo_timezone', data.timezone || 'US/Eastern');
+      window.location.href = '/app/agents';
+    } catch (err) {
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-error">' + escapeHtml(err.message) + '</div>';
+      btn.disabled = false;
+      btn.textContent = mode === 'login' ? 'Log In' : 'Sign Up';
+    }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+{% endblock %}

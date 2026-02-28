@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}ICP & Value Proposition — AI CPO Agent{% endblock %}
+{% block page_title %}ICP & Value Proposition{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:800px;">
+  <h3 style="font-size:18px;margin-bottom:4px;">Ideal Customer Profile & Value Proposition</h3>
+  <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">Define who your product is for and why they should care. This context is automatically used by the AI when generating all documents.</p>
+  <div id="alertBox"></div>
+  <form onsubmit="saveICP(event)">
+    <div class="form-group">
+      <label for="targetMarket">Target Market</label>
+      <textarea id="targetMarket" placeholder="e.g. B2B SaaS companies with 10-200 employees in North America looking to automate their product management workflow" style="min-height:80px;"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="customerSegments">Customer Segments</label>
+      <textarea id="customerSegments" placeholder="e.g. Early-stage founders (seed to Series A), Solo product managers at growing startups, Technical co-founders wearing the PM hat" style="min-height:80px;"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="painPoints">Pain Points</label>
+      <textarea id="painPoints" placeholder="e.g. No time to write proper PRDs, Roadmap planning is ad hoc, Feature prioritization is gut-feel not data-driven" style="min-height:80px;"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="valueProp">Value Proposition</label>
+      <textarea id="valueProp" placeholder="e.g. An AI CPO that writes your product docs, plans your roadmap, and keeps you focused on what matters — so you can ship faster with confidence" style="min-height:80px;"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="differentiators">Differentiators</label>
+      <textarea id="differentiators" placeholder="e.g. Always-available executive, not just a writing tool. Uses your real metrics and PMF signals. Challenges bad ideas instead of blindly executing" style="min-height:80px;"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="pricingModel">Pricing Model</label>
+      <textarea id="pricingModel" placeholder="e.g. Freemium with 3 docs/month free, Pro at $49/month for unlimited, Enterprise at $199/month with team features" style="min-height:60px;"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary" id="saveBtn">Save ICP & Value Proposition</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function loadICP() {
+    try {
+      const res = await fetch('/me/icp', { headers: authHeaders() });
+      if (!res.ok) throw new Error('Failed to load');
+      const data = await res.json();
+      document.getElementById('targetMarket').value = data.target_market || '';
+      document.getElementById('customerSegments').value = data.customer_segments || '';
+      document.getElementById('painPoints').value = data.pain_points || '';
+      document.getElementById('valueProp').value = data.value_proposition || '';
+      document.getElementById('differentiators').value = data.differentiators || '';
+      document.getElementById('pricingModel').value = data.pricing_model || '';
+    } catch (e) {
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-error">Failed to load ICP data.</div>';
+    }
+  }
+
+  async function saveICP(e) {
+    e.preventDefault();
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+    document.getElementById('alertBox').innerHTML = '';
+
+    try {
+      const res = await fetch('/me/icp', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          target_market: document.getElementById('targetMarket').value,
+          customer_segments: document.getElementById('customerSegments').value,
+          pain_points: document.getElementById('painPoints').value,
+          value_proposition: document.getElementById('valueProp').value,
+          differentiators: document.getElementById('differentiators').value,
+          pricing_model: document.getElementById('pricingModel').value,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to save');
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-success">ICP & Value Proposition saved! This will now inform all your generated documents.</div>';
+    } catch (err) {
+      document.getElementById('alertBox').innerHTML =
+        '<div class="alert alert-error">' + escapeHtml(err.message) + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Save ICP & Value Proposition';
+    }
+  }
+
+  loadICP();
+</script>
+{% endblock %}
