@@ -6,10 +6,25 @@
   <title>{% block title %}AI CPO Agent{% endblock %}</title>
   <script>
     if (window.location.pathname.startsWith('/app/') && window.location.pathname !== '/app/auth') {
+      document.documentElement.classList.add('auth-ok');
       if (!localStorage.getItem('cpo_api_key')) {
-        window.location.href = '/app/auth';
-      } else {
-        document.documentElement.classList.add('auth-ok');
+        fetch('/me/profile')
+          .then(function(res) {
+            if (!res.ok) throw new Error('unauthorized');
+            return res.json();
+          })
+          .then(function(profile) {
+            localStorage.setItem('cpo_api_key', profile.api_key || '');
+            localStorage.setItem('cpo_email', profile.email || '');
+            localStorage.setItem('cpo_first_name', profile.first_name || '');
+            localStorage.setItem('cpo_role', profile.role || 'CEO');
+            localStorage.setItem('cpo_company_name', profile.company_name || '');
+            localStorage.setItem('cpo_company_logo', profile.company_logo || '');
+            localStorage.setItem('cpo_timezone', profile.timezone || 'US/Eastern');
+          })
+          .catch(function() {
+            window.location.href = '/app/auth';
+          });
       }
     } else {
       document.documentElement.classList.add('auth-ok');
@@ -447,6 +462,7 @@
     }
 
     function logout() {
+      fetch('/auth/logout', { method: 'POST' }).catch(function() {});
       localStorage.removeItem('cpo_api_key');
       localStorage.removeItem('cpo_email');
       localStorage.removeItem('cpo_first_name');

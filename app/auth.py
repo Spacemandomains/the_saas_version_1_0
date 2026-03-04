@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import secrets
 import bcrypt
-from fastapi import Header, HTTPException
+from fastapi import Cookie, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import User
@@ -21,14 +21,21 @@ def new_api_key() -> str:
     return secrets.token_hex(32)
 
 
-def require_api_key(authorization: str = Header(default="")) -> str:
-    # Expect: Authorization: Bearer <api_key>
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-    key = authorization.replace("Bearer ", "", 1).strip()
-    if not key:
-        raise HTTPException(status_code=401, detail="Missing API key")
-    return key
+def require_api_key(
+    authorization: str = Header(default=""),
+    cpo_api_key: str = Cookie(default=""),
+) -> str:
+    # Prefer Authorization: Bearer <api_key>, fallback to auth cookie for browser flows
+    if authorization.startswith("Bearer "):
+        key = authorization.replace("Bearer ", "", 1).strip()
+        if not key:
+            raise HTTPException(status_code=401, detail="Missing API key")
+        return key
+
+    if cpo_api_key:
+        return cpo_api_key
+
+    raise HTTPException(status_code=401, detail="Missing API key")
 
 
 def get_user_by_api_key(db: Session, api_key: str) -> User | None:

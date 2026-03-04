@@ -79,6 +79,24 @@
 <script>
   if (localStorage.getItem('cpo_api_key')) {
     window.location.href = '/app/agents';
+  } else {
+    fetch('/me/profile')
+      .then(function(res) {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then(function(profile) {
+        if (!profile) return;
+        localStorage.setItem('cpo_api_key', profile.api_key || '');
+        localStorage.setItem('cpo_email', profile.email || '');
+        localStorage.setItem('cpo_first_name', profile.first_name || '');
+        localStorage.setItem('cpo_role', profile.role || 'CEO');
+        localStorage.setItem('cpo_company_name', profile.company_name || '');
+        localStorage.setItem('cpo_company_logo', profile.company_logo || '');
+        localStorage.setItem('cpo_timezone', profile.timezone || 'US/Eastern');
+        window.location.href = '/app/agents';
+      })
+      .catch(function() {});
   }
 
   let mode = 'login';

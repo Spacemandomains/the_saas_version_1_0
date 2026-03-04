@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -41,6 +41,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 _agent: Optional[CPOAgent] = None
 
 DOC_TYPES = "prd|roadmap|sprint|recap|feature_spec|user_stories|technical_handoff|release_notes|strategy_memo"
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 
 
 def get_agent() -> CPOAgent:
@@ -199,6 +200,19 @@ class LoginRequest(BaseModel):
     password: str
 
 
+
+
+def _set_auth_cookie(response: Response, api_key: str) -> None:
+    response.set_cookie(
+        key="cpo_api_key",
+        value=api_key,
+        max_age=60 * 60 * 24 * 30,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="lax",
+        path="/",
+    )
+
 def _user_profile(user: User) -> dict:
     tz = "US/Eastern"
     if user.daily_job_config:
@@ -215,7 +229,7 @@ def _user_profile(user: User) -> dict:
 
 
 @app.post("/auth/signup")
-def signup(payload: SignupRequest, db: Session = Depends(get_db)):
+def signup(payload: SignupRequest, response: Response, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         if existing.first_name == "" and existing.company_id is not None:
@@ -223,6 +237,7 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
             existing.api_key = new_api_key()
             existing.first_name = payload.first_name.strip()
             db.commit()
+            _set_auth_cookie(response, existing.api_key)
             return _user_profile(existing)
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -253,15 +268,22 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
     )
     db.commit()
 
+    _set_auth_cookie(response, user.api_key)
     return _user_profile(user)
 
 
 @app.post("/auth/login")
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    _set_auth_cookie(response, user.api_key)
     return _user_profile(user)
+
+@app.post("/auth/logout")
+def logout(response: Response):
+    response.delete_cookie(key="cpo_api_key", path="/", samesite="lax")
+    return {"ok": True}
 
 
 # -----------------------
