@@ -210,16 +210,33 @@ Rules:
 """
 
         gemini_history = []
-        for msg in history:
+        if history:
             gemini_history.append({
-                "role": "user" if msg["role"] == "user" else "model",
-                "parts": [msg["content"]],
+                "role": "user",
+                "parts": [f"SYSTEM CONTEXT:\n{system_block}\n\nFOUNDER'S MESSAGE:\n{history[0]['content']}"],
             })
+            if len(history) > 1 and history[0]["role"] == "user":
+                gemini_history.append({
+                    "role": "model",
+                    "parts": [history[1]["content"]],
+                })
+                for msg in history[2:]:
+                    gemini_history.append({
+                        "role": "user" if msg["role"] == "user" else "model",
+                        "parts": [msg["content"]],
+                    })
+            elif len(history) > 1:
+                for msg in history[1:]:
+                    gemini_history.append({
+                        "role": "user" if msg["role"] == "user" else "model",
+                        "parts": [msg["content"]],
+                    })
 
         chat = self.model.start_chat(history=gemini_history)
 
-        full_prompt = user_message
-        if not gemini_history:
+        if gemini_history:
+            full_prompt = user_message
+        else:
             full_prompt = f"SYSTEM CONTEXT:\n{system_block}\n\nFOUNDER'S MESSAGE:\n{user_message}"
 
         response = chat.send_message(full_prompt, stream=True)

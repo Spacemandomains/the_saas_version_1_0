@@ -1262,6 +1262,9 @@ def _build_product_context(user: User, db: Session) -> str:
     return "\n\n".join(parts)
 
 
+MAX_CHAT_HISTORY = 40
+
+
 @app.post("/me/chat/conversations/{convo_id}/messages")
 def send_chat_message(
     convo_id: int,
@@ -1269,6 +1272,8 @@ def send_chat_message(
     api_key: str = Depends(require_api_key),
     db: Session = Depends(get_db),
 ):
+    from app.db import SessionLocal as _SL
+
     user = get_user_by_api_key(db, api_key)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid API key")
@@ -1281,23 +1286,29 @@ def send_chat_message(
 
     user_msg = CPOMessage(conversation_id=convo.id, role="user", content=body.message)
     db.add(user_msg)
-    db.flush()
+    db.commit()
 
     history = [
         {"role": m.role, "content": m.content}
         for m in convo.messages
         if m.id != user_msg.id
     ]
+    if len(history) > MAX_CHAT_HISTORY:
+        history = history[-MAX_CHAT_HISTORY:]
 
     product_context = _build_product_context(user, db)
 
     agent = get_agent()
+    convo_id_val = convo.id
+    msg_text = body.message
+    is_first = len(history) == 0
 
     def generate_stream():
+        stream_db = _SL()
         full_response = []
         try:
             for chunk in agent.chat_stream(
-                user_message=body.message,
+                user_message=msg_text,
                 history=history,
                 product_context=product_context,
             ):
@@ -1306,24 +1317,31 @@ def send_chat_message(
         except Exception as e:
             error_msg = f"I encountered an issue processing your request: {str(e)}"
             full_response.append(error_msg)
-            yield f"data: {json.dumps({'chunk': error_msg})}\n\n"
+            yield f"data: {json.dumps({'chunk': error_msg, 'error': True})}\n\n"
 
-        complete_text = "".join(full_response)
-        assistant_msg = CPOMessage(
-            conversation_id=convo.id, role="assistant", content=complete_text
-        )
-        db.add(assistant_msg)
-        convo.updated_at = datetime.utcnow()
+        try:
+            complete_text = "".join(full_response)
+            assistant_msg = CPOMessage(
+                conversation_id=convo_id_val, role="assistant", content=complete_text
+            )
+            stream_db.add(assistant_msg)
 
-        if len(convo.messages) <= 1:
-            title = body.message[:60]
-            if len(body.message) > 60:
-                title += "..."
-            convo.title = title
+            stream_convo = stream_db.query(CPOConversation).get(convo_id_val)
+            if stream_convo:
+                stream_convo.updated_at = datetime.utcnow()
+                if is_first:
+                    title = msg_text[:60]
+                    if len(msg_text) > 60:
+                        title += "..."
+                    stream_convo.title = title
 
-        db.commit()
-
-        yield f"data: {json.dumps({'done': True, 'message_id': assistant_msg.id})}\n\n"
+            stream_db.commit()
+            yield f"data: {json.dumps({'done': True, 'message_id': assistant_msg.id})}\n\n"
+        except Exception:
+            stream_db.rollback()
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        finally:
+            stream_db.close()
 
     return StreamingResponse(generate_stream(), media_type="text/event-stream")
 
