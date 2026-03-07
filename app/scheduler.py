@@ -92,15 +92,15 @@ def _monitor_and_run():
                 new_notes = _extract_new_notes(full_text, config.last_run_date or "")
                 notes_hash = _compute_hash(new_notes)
 
-                config.last_doc_revision = doc_hash
-
                 if not new_notes.strip():
-                    logger.info(f"Monitor: user {user.id} — no 'Dear CPO' messages found in doc, skipping")
+                    logger.info(f"Monitor: user {user.id} — no 'Dear CPO' messages found in doc, updating doc hash")
+                    config.last_doc_revision = doc_hash
                     db.commit()
                     continue
 
                 if notes_hash == config.last_notes_hash and config.last_notes_hash:
-                    logger.info(f"Monitor: user {user.id} — doc changed but Dear CPO content unchanged, skipping")
+                    logger.info(f"Monitor: user {user.id} — doc changed but Dear CPO content unchanged, updating doc hash")
+                    config.last_doc_revision = doc_hash
                     db.commit()
                     continue
 
@@ -114,6 +114,7 @@ def _monitor_and_run():
 
                 if result.get("status") == "success":
                     config.last_notes_hash = notes_hash
+                    config.last_doc_revision = doc_hash
                     db.commit()
 
             except Exception as e:
