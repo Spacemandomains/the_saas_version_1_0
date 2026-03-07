@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 import google.generativeai as genai
 from jsonschema import validate, ValidationError
@@ -183,6 +183,50 @@ STRICT OUTPUT RULES:
         resp = self.model.generate_content(prompt)
         raw = (resp.text or "").strip()
         return extract_json(raw)
+
+    def chat_stream(
+        self,
+        *,
+        user_message: str,
+        history: List[Dict[str, str]],
+        product_context: str = "",
+    ) -> Iterator[str]:
+        system_block = self.system_prompt
+        if product_context:
+            system_block += "\n\n" + product_context
+
+        system_block += """
+
+YOUR TASK: Live Conversation
+
+You are in a direct conversation with the founder. This is your real-time executive channel. Respond as their CPO — strategic, direct, and specific to their product. Keep responses focused and actionable. Use your full knowledge of their product brief, tasks, and recent work to inform every answer.
+
+Rules:
+- Be concise but thorough — answer the question fully, then stop
+- Always connect your response to their product strategy
+- If they ask something outside your scope (finance, HR, etc.), name the right executive function
+- Use plain text formatting, no markdown headers
+- You can use bullet points with "-" for lists when helpful
+"""
+
+        gemini_history = []
+        for msg in history:
+            gemini_history.append({
+                "role": "user" if msg["role"] == "user" else "model",
+                "parts": [msg["content"]],
+            })
+
+        chat = self.model.start_chat(history=gemini_history)
+
+        full_prompt = user_message
+        if not gemini_history:
+            full_prompt = f"SYSTEM CONTEXT:\n{system_block}\n\nFOUNDER'S MESSAGE:\n{user_message}"
+
+        response = chat.send_message(full_prompt, stream=True)
+
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
 
     def analyze_metrics(
         self,

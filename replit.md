@@ -20,6 +20,8 @@ The primary feature is an automated daily job that:
 - **Hidden:** PRD, Roadmap, Sprint, Feature Spec, User Stories, Technical Handoff, Release Notes, Strategy Memo generation, ICP, PMF Signals, Metrics Dashboard, Executive Challenge Mode
 
 ## Recent Changes
+- 2026-03-07: Real-time chat interface — "Chat with CPO" page with conversation memory, streaming responses via SSE, multi-turn Gemini chat sessions, full product context injection (brief, tasks, ICP, status); CPOConversation + CPOMessage DB models; sidebar nav link; conversation list with create/delete
+- 2026-03-07: Hardwired full CPO executive role — comprehensive system prompt covering product strategy, vision, innovation, design, development, project management, and product marketing; policies define scope of authority, decision-making framework, strategic guardrails; all generation prompts (recap, brief, customer recap, challenge, metrics) now inject full system prompt and frame each task as CPO executive action
 - 2026-03-07: Improved monitor sync — two-layer hash detection (full doc hash + notes hash) prevents re-triggering on CPO's own writes; CPO output sections stripped before hashing source doc; recap duplicate check logs when already sent; dashboard timing more accurate
 - 2026-02-28: Render.com deployment support — added render.yaml, Procfile, gunicorn; DATABASE_URL postgres:// prefix fix in db.py; google_docs.py now supports both Replit connector and Google Service Account (GOOGLE_SERVICE_ACCOUNT_JSON env var); README.md with full Render deployment guide
 - 2026-02-27: Tighter CPO output structure — Recap now has "Outcome of the day" (one sentence), one decision (or proposed decision), "Non-core topics" separation; Brief now has single "Next action" instead of 3 bullets, "Non-core topics" section; both outputs more focused and actionable
@@ -98,6 +100,8 @@ static/
 - `metrics_snapshots` — Historical metrics data (many per user)
 - `generated_docs` — All generated documents (many per user)
 - `cpo_tasks` — CPO-tracked tasks (many per user): title, details, due_date, status (open/done/overdue), source_text
+- `cpo_conversations` — Chat conversations (many per user): title, created_at, updated_at
+- `cpo_messages` — Chat messages (many per conversation): role (user/assistant), content, created_at
 
 ### Key Endpoints (MVP)
 **Pages (GET):**

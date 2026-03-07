@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr, Field
@@ -23,8 +23,8 @@ from app.auth import (
 )
 from app.cpo_agent import CPOAgent
 from app.db import (
-    CPOTask, Company, DailyJobConfig, GeneratedDoc, ICPProfile, MetricsSnapshot, PMFSignal,
-    ProductBrief, User, get_db, init_db,
+    CPOConversation, CPOMessage, CPOTask, Company, DailyJobConfig, GeneratedDoc,
+    ICPProfile, MetricsSnapshot, PMFSignal, ProductBrief, User, get_db, init_db,
 )
 from app.daily_job import run_daily_job
 
@@ -41,7 +41,6 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 _agent: Optional[CPOAgent] = None
 
 DOC_TYPES = "prd|roadmap|sprint|recap|feature_spec|user_stories|technical_handoff|release_notes|strategy_memo"
-COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 
 
 def get_agent() -> CPOAgent:
@@ -200,19 +199,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-
-
-def _set_auth_cookie(response: Response, api_key: str) -> None:
-    response.set_cookie(
-        key="cpo_api_key",
-        value=api_key,
-        max_age=60 * 60 * 24 * 30,
-        httponly=True,
-        secure=COOKIE_SECURE,
-        samesite="lax",
-        path="/",
-    )
-
 def _user_profile(user: User) -> dict:
     tz = "US/Eastern"
     if user.daily_job_config:
@@ -229,7 +215,7 @@ def _user_profile(user: User) -> dict:
 
 
 @app.post("/auth/signup")
-def signup(payload: SignupRequest, response: Response, db: Session = Depends(get_db)):
+def signup(payload: SignupRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         if existing.first_name == "" and existing.company_id is not None:
@@ -237,7 +223,6 @@ def signup(payload: SignupRequest, response: Response, db: Session = Depends(get
             existing.api_key = new_api_key()
             existing.first_name = payload.first_name.strip()
             db.commit()
-            _set_auth_cookie(response, existing.api_key)
             return _user_profile(existing)
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -268,22 +253,15 @@ def signup(payload: SignupRequest, response: Response, db: Session = Depends(get
     )
     db.commit()
 
-    _set_auth_cookie(response, user.api_key)
     return _user_profile(user)
 
 
 @app.post("/auth/login")
-def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
+def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    _set_auth_cookie(response, user.api_key)
     return _user_profile(user)
-
-@app.post("/auth/logout")
-def logout(response: Response):
-    response.delete_cookie(key="cpo_api_key", path="/", samesite="lax")
-    return {"ok": True}
 
 
 # -----------------------
@@ -1175,6 +1153,194 @@ def page_guide(request: Request):
 @app.get("/app/settings", response_class=HTMLResponse)
 def page_settings(request: Request):
     return _html_response(request, "settings.html")
+
+
+@app.get("/app/chat", response_class=HTMLResponse)
+def page_chat(request: Request):
+    return _html_response(request, "chat.html")
+
+
+@app.get("/me/chat/conversations")
+def list_conversations(api_key: str = Depends(require_api_key), db: Session = Depends(get_db)):
+    user = get_user_by_api_key(db, api_key)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    convos = (
+        db.query(CPOConversation)
+        .filter(CPOConversation.user_id == user.id)
+        .order_by(CPOConversation.updated_at.desc())
+        .limit(50)
+        .all()
+    )
+    return [
+        {
+            "id": c.id,
+            "title": c.title,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+            "message_count": len(c.messages),
+        }
+        for c in convos
+    ]
+
+
+@app.post("/me/chat/conversations")
+def create_conversation(api_key: str = Depends(require_api_key), db: Session = Depends(get_db)):
+    user = get_user_by_api_key(db, api_key)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    convo = CPOConversation(user_id=user.id)
+    db.add(convo)
+    db.commit()
+    db.refresh(convo)
+    return {"id": convo.id, "title": convo.title}
+
+
+@app.get("/me/chat/conversations/{convo_id}/messages")
+def get_conversation_messages(convo_id: int, api_key: str = Depends(require_api_key), db: Session = Depends(get_db)):
+    user = get_user_by_api_key(db, api_key)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    convo = db.query(CPOConversation).filter(
+        CPOConversation.id == convo_id, CPOConversation.user_id == user.id
+    ).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return [
+        {
+            "id": m.id,
+            "role": m.role,
+            "content": m.content,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        }
+        for m in convo.messages
+    ]
+
+
+class ChatMessageRequest(BaseModel):
+    message: str
+
+
+def _build_product_context(user: User, db: Session) -> str:
+    parts = []
+
+    product_brief = ""
+    if user.product_brief:
+        product_brief = user.product_brief.content
+    if product_brief:
+        parts.append(f"PRODUCT BRIEF:\n{product_brief}")
+
+    tasks = db.query(CPOTask).filter(
+        CPOTask.user_id == user.id,
+        CPOTask.status.in_(["open", "overdue"]),
+    ).all()
+    if tasks:
+        task_lines = []
+        for t in tasks:
+            status = "OVERDUE" if t.status == "overdue" else "open"
+            due = f" (due {t.due_date})" if t.due_date else ""
+            task_lines.append(f"  - [{status}] {t.title}{due}")
+        parts.append("ACTIVE TASKS:\n" + "\n".join(task_lines))
+
+    config = user.daily_job_config
+    if config:
+        info = []
+        if config.ai_cpo_enabled:
+            info.append("Monitoring is ACTIVE")
+        else:
+            info.append("Monitoring is PAUSED")
+        if config.last_run_date:
+            info.append(f"Last CPO run: {config.last_run_date}")
+        if config.timezone:
+            info.append(f"Timezone: {config.timezone}")
+        parts.append("CPO STATUS:\n" + "\n".join(f"  - {i}" for i in info))
+
+    ctx = build_context(user, db)
+    if ctx.get("icp"):
+        parts.append(f"ICP & VALUE PROPOSITION:\n{json.dumps(ctx['icp'], indent=2)}")
+
+    return "\n\n".join(parts)
+
+
+@app.post("/me/chat/conversations/{convo_id}/messages")
+def send_chat_message(
+    convo_id: int,
+    body: ChatMessageRequest,
+    api_key: str = Depends(require_api_key),
+    db: Session = Depends(get_db),
+):
+    user = get_user_by_api_key(db, api_key)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+    convo = db.query(CPOConversation).filter(
+        CPOConversation.id == convo_id, CPOConversation.user_id == user.id
+    ).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    user_msg = CPOMessage(conversation_id=convo.id, role="user", content=body.message)
+    db.add(user_msg)
+    db.flush()
+
+    history = [
+        {"role": m.role, "content": m.content}
+        for m in convo.messages
+        if m.id != user_msg.id
+    ]
+
+    product_context = _build_product_context(user, db)
+
+    agent = get_agent()
+
+    def generate_stream():
+        full_response = []
+        try:
+            for chunk in agent.chat_stream(
+                user_message=body.message,
+                history=history,
+                product_context=product_context,
+            ):
+                full_response.append(chunk)
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+        except Exception as e:
+            error_msg = f"I encountered an issue processing your request: {str(e)}"
+            full_response.append(error_msg)
+            yield f"data: {json.dumps({'chunk': error_msg})}\n\n"
+
+        complete_text = "".join(full_response)
+        assistant_msg = CPOMessage(
+            conversation_id=convo.id, role="assistant", content=complete_text
+        )
+        db.add(assistant_msg)
+        convo.updated_at = datetime.utcnow()
+
+        if len(convo.messages) <= 1:
+            title = body.message[:60]
+            if len(body.message) > 60:
+                title += "..."
+            convo.title = title
+
+        db.commit()
+
+        yield f"data: {json.dumps({'done': True, 'message_id': assistant_msg.id})}\n\n"
+
+    return StreamingResponse(generate_stream(), media_type="text/event-stream")
+
+
+@app.delete("/me/chat/conversations/{convo_id}")
+def delete_conversation(convo_id: int, api_key: str = Depends(require_api_key), db: Session = Depends(get_db)):
+    user = get_user_by_api_key(db, api_key)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    convo = db.query(CPOConversation).filter(
+        CPOConversation.id == convo_id, CPOConversation.user_id == user.id
+    ).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    db.delete(convo)
+    db.commit()
+    return {"status": "deleted"}
 
 
 if __name__ == "__main__":

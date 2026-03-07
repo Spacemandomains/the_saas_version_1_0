@@ -65,6 +65,9 @@ class User(Base):
     daily_job_config: Mapped["DailyJobConfig"] = relationship(
         "DailyJobConfig", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+    conversations: Mapped[list["CPOConversation"]] = relationship(
+        "CPOConversation", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class ProductBrief(Base):
@@ -178,6 +181,34 @@ class CPOTask(Base):
     completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     user: Mapped[User] = relationship("User", back_populates="cpo_tasks")
+
+
+class CPOConversation(Base):
+    __tablename__ = "cpo_conversations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(300), default="New conversation")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped[User] = relationship("User", back_populates="conversations")
+    messages: Mapped[list["CPOMessage"]] = relationship(
+        "CPOMessage", back_populates="conversation", cascade="all, delete-orphan",
+        order_by="CPOMessage.created_at"
+    )
+
+
+class CPOMessage(Base):
+    __tablename__ = "cpo_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("cpo_conversations.id"), index=True)
+    role: Mapped[str] = mapped_column(String(20))
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    conversation: Mapped[CPOConversation] = relationship("CPOConversation", back_populates="messages")
 
 
 def init_db() -> None:
