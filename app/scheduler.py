@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 from datetime import datetime, timezone as tz, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -21,8 +22,18 @@ MIN_INTERVAL = 5
 MAX_INTERVAL = 1440
 
 
-def _compute_notes_hash(notes_text: str) -> str:
-    return hashlib.sha256(notes_text.strip().encode()).hexdigest()
+def _compute_hash(text: str) -> str:
+    return hashlib.sha256(text.strip().encode()).hexdigest()
+
+
+_CPO_OUTPUT_RE = re.compile(
+    r"(?:### Daily Recap\b|### Daily CPO Brief\b|### CPO Question for Founder\b|### CPO Recap\b).*?(?=\n### |\n[Dd]ear\s+[Cc][Pp][Oo]\b|\Z)",
+    re.DOTALL,
+)
+
+
+def _strip_cpo_output(text: str) -> str:
+    return _CPO_OUTPUT_RE.sub("", text).strip()
 
 
 def _monitor_and_run():
@@ -67,18 +78,30 @@ def _monitor_and_run():
                 doc_data = read_document(config.google_doc_id)
                 full_text = doc_data.get("text", "")
                 logger.info(f"Monitor: user {user.id} — source doc read OK, length={len(full_text)}")
-                new_notes = _extract_new_notes(full_text, config.last_run_date or "")
-                current_hash = _compute_notes_hash(new_notes)
+
+                founder_text = _strip_cpo_output(full_text)
+                doc_hash = _compute_hash(founder_text)
 
                 config.last_checked_at = now
                 db.commit()
 
-                if current_hash == config.last_notes_hash and config.last_notes_hash:
-                    logger.info(f"Monitor: user {user.id} — no new 'Dear CPO' messages (hash match), notes_len={len(new_notes.strip())}")
+                if doc_hash == config.last_doc_revision and config.last_doc_revision:
+                    logger.info(f"Monitor: user {user.id} — doc unchanged (hash match), skipping")
                     continue
+
+                new_notes = _extract_new_notes(full_text, config.last_run_date or "")
+                notes_hash = _compute_hash(new_notes)
+
+                config.last_doc_revision = doc_hash
 
                 if not new_notes.strip():
                     logger.info(f"Monitor: user {user.id} — no 'Dear CPO' messages found in doc, skipping")
+                    db.commit()
+                    continue
+
+                if notes_hash == config.last_notes_hash and config.last_notes_hash:
+                    logger.info(f"Monitor: user {user.id} — doc changed but Dear CPO content unchanged, skipping")
+                    db.commit()
                     continue
 
                 logger.info(f"Monitor: user {user.id} — new 'Dear CPO' message(s) detected, notes_len={len(new_notes.strip())}, running CPO job")
@@ -90,7 +113,7 @@ def _monitor_and_run():
                 logger.info(f"Monitor: user {user.id} — {result.get('status')}: {result.get('message', '')}")
 
                 if result.get("status") == "success":
-                    config.last_notes_hash = current_hash
+                    config.last_notes_hash = notes_hash
                     db.commit()
 
             except Exception as e:
@@ -132,6 +155,7 @@ def _check_recap_jobs():
             today_str = user_now.strftime("%Y-%m-%d")
 
             if config.last_recap_date == today_str:
+                logger.info(f"Recap check: user {user.id} — already sent today ({today_str}), skipping")
                 continue
 
             recap_time = config.recap_time or "18:00"
