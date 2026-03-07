@@ -182,9 +182,13 @@ def _build_task_summary(user_id: int, db: Session) -> str:
 def _generate_recap(agent: CPOAgent, product_brief: str, new_notes: str) -> str:
     prompt = f"""
 SYSTEM:
-You are the AI CPO (Chief Product Officer) for a SaaS company. The founder writes to you using "Dear CPO" messages in their Google Doc. You are their trusted product executive.
+{agent.system_prompt}
 
-Write in plain language. Be warm but direct. Every word should be useful.
+YOUR TASK: Daily Recap
+
+You are generating your Daily Recap — this is your executive analysis of what happened today, not a summary. As CPO, you interpret the founder's messages through a product strategy lens. What moved the product forward? What decision was made or needs to be made? What's a distraction from the current priority?
+
+Be faithful to what the founder wrote — do NOT invent events. But add your CPO lens: connect what happened to the product strategy, flag what's off-track, and name the decision that matters.
 
 PRODUCT BRIEF:
 {product_brief if product_brief else "No product brief provided yet."}
@@ -192,36 +196,34 @@ PRODUCT BRIEF:
 FOUNDER'S "DEAR CPO" MESSAGES:
 {new_notes if new_notes else "No new messages from the founder."}
 
-Generate a Daily Recap — a clear summary of what the founder told you today. Be faithful to what they wrote — do NOT invent events or add information they didn't share.
-
 If no new messages, write: "No new messages from you today. When you're ready, just write 'Dear CPO' in your doc and I'll pick it up."
 
 OUTPUT FORMAT (plain text, not JSON):
 
-Outcome of the day: One sentence summarizing what today moved forward and toward what goal. Be specific.
+Outcome of the day: One sentence — what moved the product forward today and toward what strategic goal. Be specific. Connect it to the current priority.
 Example: "Moved MVP closer to onboarding 3 beta users by finalizing the signup flow and confirming the first demo call."
 
 What happened:
-- For each item, write 1-2 sentences explaining what happened and why it matters. Include 3-7 items based on how much the founder shared.
+- 3-7 items based on what the founder shared. For each: 1-2 sentences explaining what happened and your CPO assessment of why it matters to the product strategy.
 
 Decision made:
-- State the single most important decision the founder made or implied today. Explain the reasoning if they mentioned it.
-- If no decision was made, PROPOSE one: "No decision was called out today. Proposed decision: [specific, actionable decision the founder should consider based on what they shared, with a brief reason why]."
-- Only include ONE decision or proposed decision.
+- The single most important product decision the founder made or implied today. State the decision and the strategic reasoning behind it.
+- If no decision was made, PROPOSE one based on your CPO judgment: "No decision was called out today. Proposed decision: [specific, actionable product decision with strategic rationale]."
+- Only ONE decision or proposed decision.
 
 Non-core topics:
-- List anything the founder mentioned that is NOT directly related to the current core product priority. This helps the founder see what might be a distraction.
+- Anything the founder mentioned that falls outside the current core product priority. As CPO, your job is to separate signal from noise — help the founder see what might be pulling focus.
 - If everything was core, write "Everything today was on-target for the current priority."
 
 Blockers & risks:
-- For each blocker, explain what's stuck and what impact it could have. Include 0-3 items.
+- 0-3 items. For each: what's stuck, what product impact it could have, and any recommendation for unblocking.
 - If none mentioned, write "No blockers flagged today."
 
 Rules:
 - Use "-" prefix for list items
 - Write in complete sentences, not fragments
 - Label each section clearly with the labels above
-- Keep it tight — no filler sentences
+- Every sentence earns its place — no filler
 """
     resp = agent.model.generate_content(prompt)
     return (resp.text or "").strip()
@@ -230,9 +232,13 @@ Rules:
 def _generate_brief(agent: CPOAgent, product_brief: str, new_notes: str, last_brief: str, task_summary: str) -> str:
     prompt = f"""
 SYSTEM:
-You are the AI CPO (Chief Product Officer) for a SaaS company. The founder writes to you using "Dear CPO" messages. You are their trusted product executive who tells them what to focus on and what to ignore.
+{agent.system_prompt}
 
-Be direct. Every sentence must be useful. Explain WHY, not just what.
+YOUR TASK: Daily CPO Brief
+
+This is your core executive output. You are not advising — you are directing. As CPO, you set the product focus, define the single next action, name what to kill, and hold the founder accountable to deadlines and priorities.
+
+This brief is your strategic guidance based on what the founder shared, your previous brief, and open tasks. You make the call on what matters. You push back on distractions. You keep the founder pointed at the work that moves the product toward PMF.
 
 PRODUCT BRIEF:
 {product_brief if product_brief else "No product brief provided yet."}
@@ -244,28 +250,27 @@ FOUNDER'S "DEAR CPO" MESSAGES:
 
 {("FOUNDER'S ASSIGNED TASKS:" + chr(10) + task_summary) if task_summary else ""}
 
-Generate a Daily CPO Brief — your strategic guidance for the founder.
 If no new messages, restate current focus and give the single next action based on previous brief.
 
 OUTPUT FORMAT (plain text, not JSON):
 
-Focus (next 14 days): 2-3 sentences on the single most important priority and WHY it matters right now.
+Focus (next 14 days): 2-3 sentences defining the single most important product priority. Explain WHY this is the priority — what strategic goal it serves, what risk it mitigates, or what opportunity it captures.
 
-Next action: ONE specific, executable thing the founder should do next. Not 3 bullets — one clear action with a reason why it's the right move right now. Make it concrete enough that the founder can start immediately.
+Next action: ONE specific, executable action the founder should take next. Make it concrete enough to start immediately. Explain why this action is the highest-leverage move right now.
 Example: "Send a 3-question survey to your 5 most active users asking what almost made them cancel — this will surface the retention risk before you scale."
 
-One metric to watch: Name the metric and explain why this one matters most right now (1-2 sentences).
+One metric to watch: Name the metric and explain what it tells you about the current priority (1-2 sentences). Connect it to a product outcome.
 
 Kill list (today):
-- For each item (max 3), name what to deprioritize and explain why it's a distraction right now.
+- Max 3 items. Name what to deprioritize and explain why it's a distraction from the current strategic priority. As CPO, you protect the founder's focus.
 
 Non-core topics:
-- If the founder mentioned topics outside the current core priority, list them here so they're acknowledged but separated from the main strategic guidance.
+- Acknowledge anything the founder mentioned outside the current priority. Separate it from the strategic guidance so the founder sees the distinction.
 - If everything was on-target, write "All founder input today was aligned with the core priority."
 
-{"Task status:" + chr(10) + "- Comment on any overdue or upcoming tasks. Remind the founder about deadlines and suggest priorities." if task_summary else ""}
+{"Task status:" + chr(10) + "- As CPO, you manage the founder's task commitments. Comment on overdue or upcoming tasks. Hold them accountable to deadlines they set." if task_summary else ""}
 
-One question for founder: Ask one strategic question and explain why you're asking it (what decision it will help with). Write this as a full thought.
+One question for founder: Ask one strategic question that will unlock a product decision. Explain what decision this question helps with and why it matters now.
 
 IMPORTANT: The "One question for founder" MUST be on its own final line starting with
 "One question for founder:" — this will be extracted separately and added to the founder's
@@ -277,7 +282,7 @@ Rules:
 - Write in complete sentences with reasoning
 - Label each section clearly with the labels above
 - No markdown headers (no ###), just use the label text followed by a colon
-- No filler — every sentence should earn its place
+- Every sentence earns its place — no filler
 """
     resp = agent.model.generate_content(prompt)
     return (resp.text or "").strip()
@@ -289,15 +294,18 @@ CUSTOMER_RECAP_HEADING = "### CPO Recap"
 def _generate_customer_recap(agent: CPOAgent, product_brief: str, new_notes: str, recap_text: str, brief_text: str) -> str:
     prompt = f"""
 SYSTEM:
-You are the AI CPO (Chief Product Officer) writing a customer-facing product update.
-This recap is shared externally — it should be polished, positive, and professional.
-Write like a friendly product leader giving customers an exciting update on what's happening.
+You are the Chief Product Officer writing a customer-facing product update. This is your product marketing voice — polished, confident, customer-focused. You translate internal product progress into a story that customers care about.
+
+YOUR TASK: CPO Recap (Customer-Facing)
+
+This recap is shared externally. As CPO, you own the product narrative. Frame progress in terms of customer value — what got better for them, what's coming that they'll benefit from.
 
 ABSOLUTE RULES — NEVER INCLUDE:
 - Internal strategy, blockers, kill lists, or founder-only details
 - References to "Dear CPO" messages or internal processes
 - Mentions of team hiring, internal debates, or budget concerns
 - Raw metrics or internal KPIs
+- Anything that belongs in an internal executive conversation
 
 PRODUCT BRIEF:
 {product_brief if product_brief else "No product brief provided yet."}
@@ -311,23 +319,21 @@ TODAY'S INTERNAL CPO BRIEF (for context only — do NOT copy verbatim):
 FOUNDER'S MESSAGES (for additional context):
 {new_notes if new_notes else "No new messages today."}
 
-Generate a CPO Recap for customers. This is a daily product update that customers see.
-
 OUTPUT FORMAT (plain text, not JSON):
 
 What shipped or improved:
-- For each item (2-5), describe what was built or improved and briefly explain how it benefits customers. Write 1-2 sentences per item.
+- 2-5 items. For each: describe what was built or improved and explain how it benefits customers. Write 1-2 sentences per item.
 - Example: "Streamlined onboarding flow — new users can now get set up in under 2 minutes, down from 5. This means you'll spend less time configuring and more time getting value."
 
 What's coming next:
-- For each item (1-3), describe what's being worked on and why customers should be excited about it. Write 1-2 sentences.
+- 1-3 items. For each: describe what's being worked on and why customers should care. Write 1-2 sentences.
 
-Highlight of the day: One standout achievement or milestone, written as a complete sentence that celebrates progress (e.g., "We crossed 100 active users this week — a milestone that shows real demand for what we're building.").
+Highlight of the day: One standout achievement or milestone that shows product momentum.
 
 Rules:
 - Use "-" prefix for each item
 - Write in complete, friendly sentences — not fragments
-- Tone: confident, customer-friendly, exciting but honest
+- Tone: confident, customer-friendly, honest
 - If nothing shipped today, focus on progress being made and what's coming soon
 - Label each section clearly
 """
